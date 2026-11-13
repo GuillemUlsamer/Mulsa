@@ -1,10 +1,11 @@
 import { Component, inject, OnInit, signal} from '@angular/core';
 import { RouterLink, Router} from '@angular/router';
 import { Api, Playlist } from '../api';
+import { Page } from '../page/page';
 
 
 @Component({
-  imports: [RouterLink],
+  imports: [RouterLink, Page],
   selector: 'app-playlists',
   styleUrl: './playlists.scss',
   templateUrl: './playlists.html',

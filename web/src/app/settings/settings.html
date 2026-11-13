@@ -1,16 +1,42 @@
-<button routerLink="/">Playlists</button>
+<app-page title="Settings">
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <label for="user">Soulseek username</label>
+    <input id="user" formControlName="soulseek_username" />
+    <span></span>
 
-<h1>Settings</h1>
-<form [formGroup]="form" (ngSubmit)="save()">
-  <label>Soulseek username <input formControlName="soulseek_username" /></label>
-  <label>Soulseek password <input type="password" formControlName="soulseek_password" /></label>
-  <label>Music folder <input formControlName="music_dir" /></label>
-    <button type="button" (click)="browse('music_dir')">Browse</button>
-  <label>Shared folder (optional) <input formControlName="share_dir" /></label>
-    <button type="button" (click)="browse('share_dir')">Browse</button>
-  <label>Soulseek port <input type="number" formControlName="listen_port" /></label>
-  <label>credentials.json <input formControlName="credentials_file" /></label>
-    <button type="button" (click)="browse('credentials_file')">Browse</button>
-  <button type="submit" [disabled]="saving()">Save</button>
-  <p>{{ status() }}</p>
-</form>
+    <label for="pass">Soulseek password</label>
+    <input id="pass" type="password" formControlName="soulseek_password" />
+    <span class="help">Created with this password if the account does not exist yet.</span>
+
+    <label for="music">Music folder</label>
+    <div class="control">
+      <input id="music" formControlName="music_dir" />
+      <button type="button" class="btn" (click)="browse('music_dir')">Browse...</button>
+    </div>
+    <span class="help">One subfolder per playlist.</span>
+
+    <label for="share">Shared folder</label>
+    <div class="control">
+      <input id="share" formControlName="share_dir" />
+      <button type="button" class="btn" (click)="browse('share_dir')">Browse...</button>
+    </div>
+    <span class="help">Optional. Sharing improves your queue position.</span>
+
+    <label for="port">Soulseek port</label>
+    <input id="port" type="number" formControlName="listen_port" class="short" />
+    <span class="help">Change only if slskd fails to start.</span>
+
+    <label for="creds">credentials.json</label>
+    <div class="control">
+      <input id="creds" formControlName="credentials_file" />
+      <button type="button" class="btn" (click)="browse('credentials_file')">Browse...</button>
+    </div>
+    <span class="help">Google service account with access to your sheets.</span>
+
+    <div class="buttons">
+      <button class="btn btn-primary" type="submit" [disabled]="saving()">Save</button>
+      <button class="btn" type="button" routerLink="/">Cancel</button>
+    </div>
+  </form>
+  <p footer class="status">{{ status() }}</p>
+</app-page>

@@ -23,3 +23,5 @@ body { margin: 0; font-family: 'Roboto Condensed', sans-serif; background: #F9F9
   &:hover { background: #F1F3F5; }
   &:disabled { opacity: .5; cursor: default; }
 }
+
+.btn-primary { background: #1F242E; color: #fff; border-color: #1F242E; &:hover { background: #333a47; } }
