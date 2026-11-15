@@ -1,14 +1,14 @@
-<app-page title="Settings">
+<app-page heading="Settings">
   <form [formGroup]="form" (ngSubmit)="save()">
-    <label for="user">Soulseek username</label>
+    <label for="user">Soulseek username <span class="req">*</span></label>
     <input id="user" formControlName="soulseek_username" />
     <span></span>
 
-    <label for="pass">Soulseek password</label>
+    <label for="pass">Soulseek password <span class="req">*</span></label>
     <input id="pass" type="password" formControlName="soulseek_password" />
     <span class="help">Created with this password if the account does not exist yet.</span>
 
-    <label for="music">Music folder</label>
+    <label for="music">Music folder <span class="req">*</span></label>
     <div class="control">
       <input id="music" formControlName="music_dir" />
       <button type="button" class="btn" (click)="browse('music_dir')">Browse...</button>
@@ -26,7 +26,7 @@
     <input id="port" type="number" formControlName="listen_port" class="short" />
     <span class="help">Change only if slskd fails to start.</span>
 
-    <label for="creds">credentials.json</label>
+    <label for="creds">credentials.json <span class="req">*</span></label>
     <div class="control">
       <input id="creds" formControlName="credentials_file" />
       <button type="button" class="btn" (click)="browse('credentials_file')">Browse...</button>

@@ -7,5 +7,5 @@ import { Component, input } from '@angular/core';
   styleUrl: './page.scss',
 })
 export class Page {
-  title = input.required<string>();
+  heading = input.required<string>();
 }
