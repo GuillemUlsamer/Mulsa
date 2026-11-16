@@ -83,7 +83,10 @@ def context_terms(search_artist, album_hint=None):
     terms = [normalize_for_match(p) for p in re.split(r'\s*(?:&|/|,|\bvs\.?|\bfeat\.?|\bft\.?)\s*', search_artist, flags=re.IGNORECASE)]
     if album_hint:
         terms.append(normalize_for_match(album_hint))
-        terms.append(normalize_for_match(re.sub(r'\d+', '', album_hint)))
+        # sin el numero de volumen solo si quedan dos palabras o mas: "hardcore" a secas esta en todas partes
+        no_digits = normalize_for_match(re.sub(r'\d+', '', album_hint))
+        if len(no_digits.split()) >= 2:
+            terms.append(no_digits)
     return [t for t in terms if len(t) >= 3]
 
 def score_candidates(responses, search_artist, title, expected_duration_sec=0, tolerance=60, strict=False, album_hint=None, skip_remix_check=False):
@@ -123,15 +126,25 @@ def score_candidates(responses, search_artist, title, expected_duration_sec=0, t
                 if terms and not any(t in path_norm for t in terms):
                     rejected['short title, no artist in path'] += 1
                     continue
-            if len(title_words) == 1:
-                # cuando el titulo es solo una palabra, ser mas estrictos con que la palabra aparezca
-                file_title = re.split(r'[\s_]-[\s_]', base)[-1]
+            if len(title_words) == 1 or strict:
+                # El titulo del fichero (tras el ultimo " - ") no puede traer muchas palabras que no sean
+                # del titulo ni del artista: como mucho una (sufijos tipo -HaCo, numero de pista).
+                # Evita "Don't Look Up" para "Don't" y "Omar Santana - Get Ready Mothafukas" para "Get Ready".
+                parts = re.split(r'[\s_][-\u2013\u2014][\s_]', base)
+                file_title = parts[-1]
+                file_words = core_phrase(file_title).split()
                 artist_words = set(' '.join(terms).split())
                 known = artist_words | set(core_phrase(title).split())
-                extra = [w for w in core_phrase(file_title).split() if w != title_words[0] and w not in known]
-                if title_words[0] not in core_phrase(file_title).split() or len(extra) > 1:
-                    rejected['short title, file title differs'] += 1
+                extra = [w for w in file_words if w not in known]
+                if not all(w in file_words for w in title_words) or len(extra) > 1:
+                    rejected['file title differs'] += 1
                     continue
+                # Si el nombre es "artista - titulo", el artista tiene que ser el nuestro (o solo un numero de pista)
+                if strict and len(parts) > 1:
+                    left_words = core_phrase(' '.join(parts[:-1])).split()
+                    if left_words and not (set(left_words) & artist_words) and not all(re.fullmatch(r'[a-z]?\d+', w) for w in left_words):
+                        rejected['other artist'] += 1
+                        continue
             if not (check_title_similarity(title, base) or check_title_similarity(loose_title(title), base)):
                 rejected['title'] += 1
                 continue
