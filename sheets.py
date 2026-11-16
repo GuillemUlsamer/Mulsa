@@ -35,6 +35,22 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
+# Origen de una playlist: de donde salen las filas y donde se escribe el estado.
+# El pipeline solo usa volumes() y set_status(); cualquier origen con esos dos metodos vale.
+class GoogleSource:
+    def __init__(self, client, name):
+        self.name = name
+        self.sheet = client.open(name)
+        self._ws = {}
+
+    # Devuelve [(titulo_volumen, filas)], filas como listas de strings (lo que da get_all_values).
+    def volumes(self):
+        self._ws = {ws.title: ws for ws in self.sheet.worksheets()}
+        return [(title, ws.get_all_values()) for title, ws in self._ws.items()]
+
+    def set_status(self, volume, row_num, text):
+        self._ws[volume].update_cell(row_num, COL_STATUS + 1, text)
+
 def setup_gspread():
     if not CREDENTIALS_FILE.exists():
         print(f"Error: {CREDENTIALS_FILE} not found.")
@@ -96,25 +112,19 @@ def parse_duration(duration_val):
     except ValueError: pass
     return 0
 
-def process_sheet(client, spreadsheet_name, base_download_dir):
-    # 1. Abro el spreadsheet (si existe)
-    try:
-        sheet = client.open(spreadsheet_name)
-    except gspread.exceptions.SpreadsheetNotFound:
-        log.line(f"Spreadsheet '{spreadsheet_name}' not found.", "error")
-        return
+def process_playlist(source, base_download_dir):
+    spreadsheet_name = source.name
 
-    # 2. Creo la carpeta de descargas si no existe
+    # 1. Creo la carpeta de descargas si no existe
     if not os.path.exists(base_download_dir):
         os.makedirs(base_download_dir)
     review = []
     pool = ThreadPoolExecutor(max_workers=THREADS)
     jobs = []
     
-    # 3. Por cada pagina que tenga el spreadsheet, miro las filas y veo cuales estan checkeadas para descargar o eliminar
-    for worksheet in sheet.worksheets():
-        rows = worksheet.get_all_values()
-        vol_match = re.search(r'\d+', worksheet.title)
+    # 2. Por cada volumen de la playlist, miro las filas y veo cuales estan checkeadas para descargar o eliminar
+    for vol_title, rows in source.volumes():
+        vol_match = re.search(r'\d+', vol_title)
         album_name = f"{spreadsheet_name} {vol_match.group(0)}" if vol_match else spreadsheet_name
         header = rows[0] if rows else []
         album_year = header[COL_YEAR] if len(header) > 9 else ''      # J1
@@ -127,10 +137,10 @@ def process_sheet(client, spreadsheet_name, base_download_dir):
                 log.line(f"Cover not available: {e}", "error")
         album_hint = f"{spreadsheet_name} {vol_match.group(0)}" if vol_match else None
 
-        # 3.1 Si no hay filas o solo hay una (header), salto esta hoja
+        # 2.1 Si no hay filas o solo hay una (header), salto esta hoja
         if len(rows) < 2: continue
         
-        # 3.2 Por cada fila (excepto la primera que es el header), miro a ver que hago
+        # 2.2 Por cada fila (excepto la primera que es el header), miro a ver que hago
         for i in range(1, len(rows)):
             check_stop()
             row = rows[i]
@@ -156,12 +166,12 @@ def process_sheet(client, spreadsheet_name, base_download_dir):
             if is_checked and "Downloaded" not in status:
                 exp_seconds = parse_duration(duration_str)
                 # Pongo el trabajo (descargar una cancion) en la cola del pool de threads
-                jobs.append(pool.submit(download_row, worksheet, row_num, artist, title, file_path, exp_seconds, album_hint,
+                jobs.append(pool.submit(download_row, source, vol_title, row_num, artist, title, file_path, exp_seconds, album_hint,
                                         album_name, album_year, track_no, cover_bytes, review))
                 
             # Si no esta checkeada pero esta descargada, la borro
             elif not is_checked and "Downloaded" in status and "Deleting" not in status:
-                log.song((worksheet.title, row_num), f"[{worksheet.title}] {filename}")
+                log.song((vol_title, row_num), f"[{vol_title}] {filename}")
                 if os.path.exists(mp3_path):
                     try:
                         os.remove(mp3_path)
@@ -169,7 +179,7 @@ def process_sheet(client, spreadsheet_name, base_download_dir):
                     except Exception as e:
                         log.status(f"Del Error: {e}", "error")
                 
-                worksheet.update_cell(row_num, COL_STATUS + 1, "")
+                source.set_status(vol_title, row_num, "")
 
     # Espero a que terminen todos los trabajos
     try:
@@ -184,28 +194,28 @@ def process_sheet(client, spreadsheet_name, base_download_dir):
             log.line("  " + item)
 
 
-def download_row(worksheet, row_num, artist, title, file_path, exp_seconds, album_hint,
+def download_row(source, vol_title, row_num, artist, title, file_path, exp_seconds, album_hint,
                  album_name, album_year, track_no, cover_bytes, review):
     check_stop()
     filename = f"{artist} - {title}"
-    log.song((worksheet.title, row_num), f"[{worksheet.title}] {filename}")
-    worksheet.update_cell(row_num, COL_STATUS + 1, "Downloading...")
+    log.song((vol_title, row_num), f"[{vol_title}] {filename}")
+    source.set_status(vol_title, row_num, "Downloading...")
 
     try:
         final_path, note = download_track(artist, title, file_path, expected_duration_sec=exp_seconds, tolerance=60, album_hint=album_hint)
     except SystemExit:
-        worksheet.update_cell(row_num, COL_STATUS + 1, "")
+        source.set_status(vol_title, row_num, "")
         raise
 
     # si ha funcionado, pongo los tags
     if final_path:
         tag_file(final_path, artist, title, album_name, album_year, track_no, cover_bytes)
-        worksheet.update_cell(row_num, COL_STATUS + 1, f"Downloaded ({note})" if note else "Downloaded")
+        source.set_status(vol_title, row_num, f"Downloaded ({note})" if note else "Downloaded")
         log.status(f"Done ({note})" if note else "Done", "done")
         if note:
             review.append(f"{filename}: {note}")
     else:
-        worksheet.update_cell(row_num, COL_STATUS + 1, "Failed, Do it manually") 
+        source.set_status(vol_title, row_num, "Failed, Do it manually")
         log.status("Failed", "failed")
         review.append(f"{filename}: failed")
         log.summary(f"goal:       {filename}\nFAILED\n")

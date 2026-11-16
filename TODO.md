@@ -1,17 +1,26 @@
 # TODO
 
-## App
-- [ ] Puerto de la API fijo (8765) en `main.py`: si esta ocupado la ventana abre en blanco. Elegir
-  uno libre al arrancar (`socket` con puerto 0) y pasarselo a uvicorn y a `create_window`.
-
-## 1. OAuth (quitar credentials.json)
-- [ ] Registrar un cliente OAuth propio en Google Cloud (tipo Desktop) con scopes de Drive y Sheets.
-- [ ] `api.py`: endpoint que abre el navegador del sistema con la URL de consentimiento y otro que
-  recibe el callback en `127.0.0.1:8765`; guardar el token en `%LOCALAPPDATA%\Mulsa`.
-- [ ] `sheets.py`: autenticar gspread con el token en vez del service account.
-- [ ] Settings: boton "Sign in with Google" en lugar del campo de `credentials.json`. Mantener el
-  service account como opcion avanzada para quien ya lo tenga.
-- [ ] Ya no hace falta compartir la hoja con el `client_email`: actualizar README.
+## 1. Playlists sin service account
+Google Sheets sigue siendo donde se marcan canciones (movil) y donde se escribe el estado; eso no
+se toca hasta que exista la biblioteca (bloque 4). Lo que cambia es de donde salen las playlists.
+- [ ] `sheets.py`: separar "de donde vienen las filas y donde se escribe el estado" (origen) del
+  pipeline de descarga. Origen Google = lo de ahora. Sin cambio de comportamiento.
+- [ ] Importar xlsx: boton Import en Playlists, `pick-file`, copia a `%LOCALAPPDATA%\Mulsa\playlists\`,
+  lectura con `openpyxl` con la misma disposicion (una pestana por volumen, A2:C2 ano y portada).
+  El estado se escribe en la columna G de la copia, igual que en la hoja. Reimportar actualiza las
+  marcas sin perder estados. Las xlsx salen en la lista de playlists junto a las de Google.
+- [ ] `gauth.py`: login OAuth con `drive.file` (no sensible, sin verificacion ni pantalla de aviso,
+  gratis), navegador del sistema con `run_local_server`, token en `%LOCALAPPDATA%\Mulsa`, logout.
+  Settings: fila "Google account" con Sign in / Sign out. El service account queda como opcion
+  avanzada hasta que todo el mundo este migrado.
+- [ ] Selector de Google (Picker) dentro de la ventana: Angular carga `api.js`, pide el token a la
+  API y abre el selector; los IDs elegidos van a `POST /api/playlists/google`. Con `drive.file`
+  solo se ven las hojas elegidas o creadas por Mulsa. Comprobar si elegir una carpeta da acceso a
+  su contenido (probablemente no).
+- [ ] "New playlist" desde Mulsa: crea la hoja en el Drive del usuario con cabeceras, anchos y
+  checkboxes (lo que hoy hace "Set up" del Apps Script); al crearla Mulsa, la ve sin selector.
+- [ ] Limpieza: README, `requirements.txt` (`openpyxl`, `google-auth-oauthlib`), `Mulsa.spec`
+  (JSON del cliente OAuth en `datas`).
 
 ## 2. Rediseno
 - [ ] Decidir el concepto antes de Figma: catalogo de discos / reproductor antiguo, no SaaS.
