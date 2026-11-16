@@ -1,7 +1,12 @@
 import os
 import re
 import hashlib
+import shutil
 import warnings
+import datetime
+import threading
+import openpyxl
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
 warnings.filterwarnings('ignore', message='.*Python version.*past its end of life.*')
@@ -51,6 +56,78 @@ class GoogleSource:
     def set_status(self, volume, row_num, text):
         self._ws[volume].update_cell(row_num, COL_STATUS + 1, text)
 
+# Mismo contrato que GoogleSource, sobre una copia local en PLAYLISTS_DIR.
+class XlsxSource:
+    def __init__(self, path):
+        self.path = Path(path)
+        self.name = self.path.stem
+        self.wb = openpyxl.load_workbook(self.path)
+        self._lock = threading.Lock()
+
+    def volumes(self):
+        return [(ws.title, [[_cell_text(c) for c in row] for row in ws.iter_rows(values_only=True)])
+                for ws in self.wb.worksheets]
+
+    # openpyxl no escribe celdas sueltas: se cambia en memoria y se guarda el libro entero.
+    def set_status(self, volume, row_num, text):
+        with self._lock:
+            self.wb[volume].cell(row_num, COL_STATUS + 1).value = text
+            self.wb.save(self.path)
+
+# Deja cada celda como la daria get_all_values(): texto, booleanos en mayusculas, horas como m:ss.
+def _cell_text(value):
+    if value is None:
+        return ''
+    if isinstance(value, bool):
+        return 'TRUE' if value else 'FALSE'
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    if isinstance(value, datetime.time):
+        return f"{value.hour * 60 + value.minute}:{value.second:02d}"
+    if isinstance(value, datetime.timedelta):
+        total = int(value.total_seconds())
+        return f"{total // 60}:{total % 60:02d}"
+    return str(value)
+
+def import_xlsx(src_path):
+    src_path = Path(src_path)
+    bootstrap.PLAYLISTS_DIR.mkdir(parents=True, exist_ok=True)
+    dest = bootstrap.PLAYLISTS_DIR / src_path.name
+    old_status = {}
+    if dest.exists():
+        old = openpyxl.load_workbook(dest, read_only=True)
+        for ws in old.worksheets:
+            for i, row in enumerate(ws.iter_rows(min_col=COL_STATUS + 1, max_col=COL_STATUS + 1, values_only=True), start=1):
+                if row[0]:
+                    old_status[(ws.title, i)] = row[0]
+        old.close()
+    shutil.copyfile(src_path, dest)
+    if old_status:
+        wb = openpyxl.load_workbook(dest)
+        for (title, i), text in old_status.items():
+            if title in wb.sheetnames:
+                wb[title].cell(i, COL_STATUS + 1).value = text
+        wb.save(dest)
+    return dest.stem
+
+def xlsx_path(name):
+    p = bootstrap.PLAYLISTS_DIR / f"{name}.xlsx"
+    return p if p.exists() else None
+
+def list_xlsx_playlists():
+    result = []
+    for p in sorted(bootstrap.PLAYLISTS_DIR.glob('*.xlsx'), key=lambda p: p.stem.lower()):
+        try:
+            wb = openpyxl.load_workbook(p, read_only=True)
+            row = next(wb.worksheets[0].iter_rows(min_row=2, max_row=2, max_col=3, values_only=True), ())
+            wb.close()
+        except Exception:
+            row = ()
+        year = _cell_text(row[1]) if len(row) > 1 else ''
+        match = IMAGE_URL_RE.search(str(row[2]) if len(row) > 2 else '')
+        result.append({'title': p.stem, 'id': None, 'image_url': match.group(1) if match else None, 'image': None, 'year': year, 'source': 'xlsx'})
+    return result
+
 def setup_gspread():
     if not CREDENTIALS_FILE.exists():
         print(f"Error: {CREDENTIALS_FILE} not found.")
@@ -86,9 +163,9 @@ def fetch_image(url, timeout=10):
 def list_playlists(with_images=True, workers=8):
     client = setup_gspread()
     if not client:
-        return []
+        return list_xlsx_playlists()
     files = sorted(client.list_spreadsheet_files(), key=lambda f: f['name'].lower())
-    playlists = [{'title': f['name'], 'id': f['id'], 'image_url': None, 'image': None, 'year': ''} for f in files]
+    playlists = [{'title': f['name'], 'id': f['id'], 'image_url': None, 'image': None, 'year': '', 'source': 'google'} for f in files]
 
     def fill(p):
         try:
@@ -100,7 +177,7 @@ def list_playlists(with_images=True, workers=8):
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
         list(pool.map(fill, playlists))
-    return playlists
+    return list_xlsx_playlists() + playlists
 
 # para limpiar el formato de duración, que tenga sentido
 def parse_duration(duration_val):

@@ -6,6 +6,7 @@ export interface Playlist {
     name: string;
     cover_url: string | null;
     year: string;
+    source: 'google' | 'xlsx';
 }
 
 export interface Settings {
@@ -57,6 +58,9 @@ export class Api {
     }
     pickFile(){
         return this.http.post<{path: string}>(`${this.base}/pick-file`, null);
+    }
+    importXlsx(){ 
+        return this.http.post<{name: string | null}>(`${this.base}/playlists/import`, {});
     }
     events(): Observable<LogEvent> {
         return new Observable(subscriber => {

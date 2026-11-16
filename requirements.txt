@@ -5,6 +5,7 @@ gspread
 google-auth
 requests
 mutagen
+openpyxl
 imageio-ffmpeg
 fastapi
 uvicorn

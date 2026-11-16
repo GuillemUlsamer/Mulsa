@@ -72,7 +72,7 @@ def events():
 def playlists():
     result = sheets.list_playlists(with_images=False)
     _covers.update({p["title"]: p["image_url"] for p in result})
-    return [{"name": p["title"], "cover_url": p["image_url"], "year": p["year"]} for p in result]
+    return [{"name": p["title"], "cover_url": p["image_url"], "year": p["year"], "source": p["source"]} for p in result]
 
 # busca la playlist por su nombre y devuelve la portada
 @api.get("/playlists/{name}/cover")
@@ -182,8 +182,17 @@ def pick_folder():
     return {"path": result[0] if result else None}
 
 @api.post("/pick-file")
-def pick_file():
+def pick_file(types: str = "JSON (*.json)"):
     if window is None:
         raise HTTPException(501, "no native window")
-    result = window.create_file_dialog(webview.OPEN_DIALOG, file_types=("JSON (*.json)",))
+    result = window.create_file_dialog(webview.OPEN_DIALOG, file_types=(types,))
     return {"path": result[0] if result else None}
+
+@api.post("/playlists/import")
+def import_playlist():
+    if window is None:
+        raise HTTPException(501, "no native window")
+    result = window.create_file_dialog(webview.OPEN_DIALOG, file_types=("Excel (*.xlsx)",))
+    if not result:
+        return {"name": None}
+    return {"name": sheets.import_xlsx(result[0])}

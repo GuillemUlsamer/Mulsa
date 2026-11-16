@@ -28,6 +28,10 @@ export class Playlists implements OnInit {
     });
   }
   
+  importXlsx() {
+    this.api.importXlsx().subscribe(r => { if (r.name) this.load(); });
+  }
+
   cover(name_playlist: string) {
     return `/api/playlists/${encodeURIComponent( name_playlist )}/cover`;
   }

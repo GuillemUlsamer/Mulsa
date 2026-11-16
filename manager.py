@@ -7,7 +7,7 @@ from stop import STOP_EVENT, check_stop
 import bootstrap
 from slskd_client import ensure_slskd, stop_slskd
 import gspread
-from sheets import setup_gspread, process_playlist, GoogleSource
+from sheets import setup_gspread, process_playlist, GoogleSource, XlsxSource, xlsx_path
 
 def run_manager(spreadsheet_name):
     download_dir = str(Path(cfg()['music_dir']) / (spreadsheet_name.upper() + " PLAYLIST"))
@@ -22,14 +22,18 @@ def run_manager(spreadsheet_name):
         bootstrap.ensure_slskd_yml()
         check_stop()
         slskd_proc = ensure_slskd()
-        client = setup_gspread()
-        if not client:
-            return
-        try:
-            source = GoogleSource(client, spreadsheet_name)
-        except gspread.exceptions.SpreadsheetNotFound:
-            log.line(f"Spreadsheet '{spreadsheet_name}' not found.", "error")
-            return
+        path = xlsx_path(spreadsheet_name)
+        if path:
+            source = XlsxSource(path)
+        else:
+            client = setup_gspread()
+            if not client:
+                return
+            try:
+                source = GoogleSource(client, spreadsheet_name)
+            except gspread.exceptions.SpreadsheetNotFound:
+                log.line(f"Spreadsheet '{spreadsheet_name}' not found.", "error")
+                return
         log.line("Checking what you want...")
         process_playlist(source, download_dir)
         log.line("Finished :)", "done")

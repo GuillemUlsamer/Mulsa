@@ -16,6 +16,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 # Datos de la app: %LOCALAPPDATA%\Mulsa (Windows). Fuera del codigo.
 APP_DIR = Path(os.environ.get('LOCALAPPDATA', Path.home())) / 'Mulsa'
+PLAYLISTS_DIR = APP_DIR / 'playlists'
 
 # La app se llamaba Music Manager: si existe la carpeta vieja y no la nueva, se renombra
 # y se actualizan las rutas absolutas que config.json guarda (exe, app_dir).

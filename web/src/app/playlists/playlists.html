@@ -1,4 +1,5 @@
 <app-page heading="Playlists">
+  <button actions class="btn" (click)="importXlsx()">Import xlsx</button>
   <button actions class="btn" routerLink="/settings">Settings</button>
 
   <p class="hint">Choose a playlist to download</p>
@@ -8,7 +9,7 @@
         <img [src]="cover(p.name)" [alt]="p.name" />
         <div class="text">
           <span class="name">{{ p.name }}</span>
-          <span class="sub">{{ p.year }}</span>
+          <span class="sub">{{ p.year }}@if (p.source === 'xlsx') { · xlsx}</span>
         </div>
       </a>
     }
