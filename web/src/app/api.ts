@@ -65,7 +65,8 @@ export class Api {
                 subscriber.next(JSON.parse(e.data));
             };
             source.onerror = () => {
-                subscriber.error(new Error('Events stream lost'));
+                // EventSource reconecta solo (p. ej. tras un reinicio de uvicorn); no cerramos el stream
+                console.warn('events stream reconnecting...');
             };
             return () => source.close();
         });

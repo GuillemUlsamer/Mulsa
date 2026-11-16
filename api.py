@@ -53,7 +53,11 @@ def events():
     def stream():
         try:
             while True:
-                event = q.get()
+                try:
+                    event = q.get(timeout=15)
+                except queue.Empty:
+                    yield ": keepalive\n\n"
+                    continue
                 yield f"data: {json.dumps(event)}\n\n"
         finally:
             with _clients_lock:

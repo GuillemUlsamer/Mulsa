@@ -80,7 +80,12 @@ def core_phrase(s):
     return ' '.join(w for w in normalize_for_match(s).split() if w not in GENERIC_WORDS)
 
 def context_terms(search_artist, album_hint=None):
-    terms = [normalize_for_match(p) for p in re.split(r'\s*(?:&|/|,|\bvs\.?|\bfeat\.?|\bft\.?)\s*', search_artist, flags=re.IGNORECASE)]
+    terms = []
+    for p in re.split(r'\s*(?:&|/|,|\bvs\.?|\bfeat\.?|\bft\.?)\s*', search_artist, flags=re.IGNORECASE):
+        terms.append(normalize_for_match(p))
+        # siglas con puntos (T.l.a.d., B.s.e.): tambien la version pegada, que es como suelen venir los ficheros
+        if re.fullmatch(r'(?:[A-Za-z]\.)+', p.strip()):
+            terms.append(p.replace('.', '').lower())
     if album_hint:
         terms.append(normalize_for_match(album_hint))
         # sin el numero de volumen solo si quedan dos palabras o mas: "hardcore" a secas esta en todas partes
