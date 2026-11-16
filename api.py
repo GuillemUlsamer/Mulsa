@@ -29,7 +29,6 @@ window = None  # se setea desde main.py
 # ---------- eventos (SSE) ----------
 # Cada navegador conectado a /events tiene su propia cola. El handler de log.py mete
 # cada evento en todas las colas; el endpoint /events saca de la suya y lo escribe.
-# Es lo que en gui.py hacia LogView.handle con after(0, ...).
 _clients = []
 _clients_lock = threading.Lock()
 
