@@ -5,7 +5,6 @@ gspread
 google-auth
 requests
 mutagen
-pillow
 imageio-ffmpeg
 fastapi
 uvicorn
