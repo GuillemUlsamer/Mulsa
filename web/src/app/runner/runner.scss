@@ -1,6 +1,42 @@
-.search { color: #1a73e8; }
-.downloading { color: #9c27b0; }
-.done { color: #188038; font-weight: bold; }
-.failed, .error { color: #d93025; font-weight: bold; }
-.review { color: #ffd415; }
-.list { height: 60vh; overflow-y: auto; }
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 20px;
+  background: #fff;
+  border: 1px solid #DBE0E6;
+  border-radius: 8px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 12px;
+  color: #6E7582;
+}
+
+.song {
+  font-size: 14px;
+  color: #1E1E1E;
+  padding: 2px 0;
+  border-bottom: 1px solid #F1F3F5;
+}
+
+.text { overflow-wrap: anywhere; }
+.status { flex-shrink: 0; }
+
+.search .status { color: #1a73e8; }
+.downloading .status { color: #9c27b0; }
+.done .status, .done { color: #188038; font-weight: 600; }
+.failed .status, .failed { color: #d93025; font-weight: 600; }
+.error { color: #d93025; }
+.review { color: #b26a00; }
+
+.state { margin: 0; font-size: 12px; color: #6E7582; }
+.buttons { display: flex; gap: 8px; }

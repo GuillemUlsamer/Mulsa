@@ -29,7 +29,6 @@ window = None  # se setea desde main.py
 # ---------- eventos (SSE) ----------
 # Cada navegador conectado a /events tiene su propia cola. El handler de log.py mete
 # cada evento en todas las colas; el endpoint /events saca de la suya y lo escribe.
-# Es lo que en gui.py hacia LogView.handle con after(0, ...).
 _clients = []
 _clients_lock = threading.Lock()
 
@@ -53,7 +52,11 @@ def events():
     def stream():
         try:
             while True:
-                event = q.get()
+                try:
+                    event = q.get(timeout=15)
+                except queue.Empty:
+                    yield ": keepalive\n\n"
+                    continue
                 yield f"data: {json.dumps(event)}\n\n"
         finally:
             with _clients_lock:
@@ -69,7 +72,7 @@ def events():
 def playlists():
     result = sheets.list_playlists(with_images=False)
     _covers.update({p["title"]: p["image_url"] for p in result})
-    return [{"name": p["title"], "cover_url": p["image_url"]} for p in result]
+    return [{"name": p["title"], "cover_url": p["image_url"], "year": p["year"]} for p in result]
 
 # busca la playlist por su nombre y devuelve la portada
 @api.get("/playlists/{name}/cover")

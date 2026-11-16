@@ -1,96 +1,84 @@
 # Mulsa
 
-Este proyecto sincroniza una carpeta de música local con una hoja de cálculo de Google Sheets.
+This project keeps a local music folder in sync with your Google Sheets.
 
-Si una canción de tu sheet de google esta marcada, la busca y la descarga de Soulseek (a través de slskd), la convierte a MP3, añade metadatos (ID3 tags) y actualiza el estado en la hoja de cálculo. También gestiona el borrado de archivos si se desmarcan en la lista.
+If you tick a song in your spreadsheet, Mulsa searches for it on Soulseek (through slskd), downloads it, converts it to MP3, writes the metadata (artist, title, album, year, track number and cover art) and reports the status back to the sheet. If you untick a song, it deletes it.
 
-Incluye un script de Google Apps Script (`playlistHelper.gs`) para importar tracklists directamente desde Discogs a la hoja de cálculo. 
+It includes a Google Apps Script (playlistHelper.gs) to import tracklists from Discogs into the sheet.
 
 ## Features
 - Sync music library with Google Sheets
 - Download tracks from Soulseek automatically (strives for best bitrate)
+- Up to 5 downloads at once, spread across users; remembers which users serve well
 - Convert to MP3
 - Add metadata: artist, title, album (compilation + volume), year, track number and cover art
+- Flag songs worth checking (verify) when the duration looks off or the match came from a search without artist
 - Import playlists from Discogs
 - Import Discogs lists (multi-release) and create volumes automatically
 - Keep a Releases catalog sheet with album, year and cover
-- Run from a desktop GUI (`gui.py`) with playlist cards from your Drive, live colored logs and stop button
+- Desktop app with playlist cards from your Drive, per-song progress, stop button and a summary of what got downloaded
 
 ## Tech Stack
-- Python
+- Python (FastAPI, uvicorn, pywebview, gspread, mutagen)
+- Angular (user interface)
 - Google Sheets API
 - slskd (Soulseek client, REST API)
 - FFmpeg
 - Google Apps Script
 
-## Requisitos Previos
+## Prerequisites
+1.  **Soulseek account**: username and password. If the user does not exist, it is created with that password the first time it connects.
+2. **Google service account**:
+    * Enable the Google Sheets and Google Drive APIs in Google Cloud Console.
+    * Create a service account and download its JSON key.
+    * Save the file as credentials.json anywhere you like; the app asks for its location on first run.
+    * **Important**: share your spreadsheet with the service account email (client_email in the JSON) as an editor.
 
-1.  **Cuenta de Soulseek**: usuario y contraseña. Si el usuario no existe, se crea con esa contraseña la 
-    primera vez que conecta.
-2.  **Cuenta de Servicio de Google**:
-    *   Habilita las APIs de Google Sheets y Google Drive en Google Cloud Console.
-    *   Crea una cuenta de servicio y descarga la clave JSON.
-    *   Guarda el archivo como `credentials.json` donde quieras, la app al arrancar te pide que indiques su ubicacion.
-    *   **Importante**: Comparte tu hoja de cálculo con el email de la cuenta de servicio (aparece en el JSON como `client_email`). Modo editor.
+## Installation
+1.  Download 'MulsaSetup-x.x.x.exe' from the [Releases](https://github.com/GuillemUlsamer/mulsa/releases) page and run it. It creates a desktop shortcut.
+2.  Open Mulsa. The first time, the settings screen shows up:
+    *   Soulseek username and password.
+    *   Music folder: where playlists are saved (one subfolder per playlist).
+    *   Shared folder (optional): what you offer to the Soulseek network. Sharing something makes more users serve you.
+    *   Google `credentials.json`.
+    *   Soulseek port (leave 50300 if you don't know what it is).
 
-## Instalación
+    Fields marked with `*` are required.
+3.  Press **Save**. It downloads slskd (the Soulseek client) and configures it; it takes about a minute. Everything lives in `%LOCALAPPDATA%\Mulsa`, outside the music folder.
 
-1.  Descarga `MulsaSetup-x.x.x.exe` de la página de [Releases](https://github.com/GuillemUlsamer/mulsa/releases) y ejecútalo. Crea un acceso directo en el escritorio.
-2.  Abre Mulsa. La primera vez aparece la pantalla de configuración:
-    *   Usuario y contraseña de Soulseek.
-    *   Carpeta de música: donde se guardarán las playlists (una subcarpeta por cada una).
-    *   Carpeta a compartir (opcional): lo que ofreces a la red de Soulseek. Compartir algo hace que más usuarios te sirvan.
-    *   `credentials.json` de Google.
-    *   Puerto de Soulseek (deja 50300 si no sabes qué es).
-3.  Pulsa **Set up**. Descarga slskd (el cliente de Soulseek) y lo configura; tarda un minuto. Todo queda en `%LOCALAPPDATA%\Mulsa`, fuera de la carpeta de música.
+To update, install the new version on top; settings are kept.
 
-# aparte
-    Si quieres ejecutarlo o modificarlo desde el código:
-    git clone https://github.com/GuillemUlsamer/mulsa.git
-    cd mulsa
-    pip install -r requirements.txt
-    python gui.py
+## Spreadsheet Setup
+You can set up the sheet by hand or with the included helper.
 
-    Para generar el instalador (necesitas [Inno Setup 6](https://jrsoftware.org/isdl.php) instalado):
-    python -m pip install pyinstaller
-    python -m PyInstaller --noconfirm Mulsa.spec
-    & "${env:LOCALAPPDATA}\Programs\Inno Setup 6\ISCC.exe" installer.iss
+### Automatic Method (Recommended)
+Use the `playlistHelper.gs` script to set up the sheets quickly:
+1.  Install the script following the steps in the **Discogs Helper** section (below).
+2.  Reload the Google Sheets page.
+3.  In the `music_manager` menu at the top, select **Set up**.
+4.  Enter the number of volumes (sheets) you want to create.
+5.  The script generates the sheets with the right headers and column widths.
 
-## Configuración de la Hoja de Cálculo
+### Column Layout (Manual)
+If you prefer to do it by hand, the spreadsheet must have the following columns (starting at column A):
 
-Puedes configurar la hoja manualmente o usar la herramienta automática incluida.
-
-### Método Automático (Recomendado)
-
-Utiliza el script `playlistHelper.gs` para configurar las hojas rápidamente:
-1.  Instala el script siguiendo los pasos de la sección **Helper de Discogs** (más abajo).
-2.  Recarga la página de Google Sheets.
-3.  En el menú superior `music_manager`, selecciona **Set up**.
-4.  Introduce el número de volúmenes (hojas) que deseas crear.
-5.  El script generará las hojas con los encabezados y anchos de columna correctos automáticamente.
-
-### Estructura de Columnas (Manual)
-
-Si prefieres hacerlo manualmente, la hoja de cálculo debe tener la siguiente estructura de columnas (comenzando por la columna A):
-
-| Columna | Nombre Sugerido | Descripción |
+| Column | Suggested Name | Description |
 | :--- | :--- | :--- |
-| A | Posición | Número de pista |
-| B | Artista | Nombre del artista |
-| C | Título | Nombre de la canción |
-| D | Duración | Duración del track (Formato mm:ss o h:mm:ss) |
-| E | Acumulado | (Opcional) |
-| F | Descargar | **Checkbox** (TRUE para descargar, FALSE para borrar) |
-| G | Estado | Usado por el script para escribir el estado |
-| H | Notas | (Opcional) |
+| A | Position | Track number |
+| B | Artist | Artist name |
+| C | Title | Song name |
+| D | Duration | Track length (mm:ss or h:mm:ss) |
+| E | Cumulative | (Optional) |
+| F | Download | **Checkbox** (TRUE to download, FALSE to delete) |
+| G | Status | Written by the app |
+| H | Notes | (Optional) |
 
-### Helper de Discogs
-
-Para facilitar la importación de música:
-1.  Abre tu hoja de cálculo en Google Sheets.
-2.  Ve a **Extensiones > Apps Script**.
-3.  Copia el contenido del archivo `playlistHelper.gs` en el editor.
-pon la biblioteca : 1efgoS3Xk_cBVN14eYvrbJngBN8EuUARaOQsqbWSH-eFU6SWdwZR4Tv9N
+### Discogs Helper
+To make importing music easier:
+1.  Open your spreadsheet in Google Sheets.
+2.  Go to Extensions > Apps Script.
+3.  Add the library: 1efgoS3Xk_cBVN14eYvrbJngBN8EuUARaOQsqbWSH-eFU6SWdwZR4Tv9N
+4.  Paste this into the editor:
    
 function onOpen() { General_music_manager.onOpen(); }
 
@@ -116,64 +104,49 @@ function durationToSeconds(duration) { General_music_manager.durationToSeconds(d
 
 function secondsToSheetsDuration(seconds) { General_music_manager.secondsToSheetsDuration(seconds); }
 
-5.  Recarga la hoja. Aparecerá un menú personalizado para importar releases de Discogs usando su ID.
+5.  Reload the sheet. A custom menu appears to import Discogs releases by ID.
 
-Además del import por Release ID, el menú también incluye:
-- **Import Discogs List**: importa una lista completa y crea un volumen por release.
-- Hoja **Releases**: guarda catálogo de álbumes importados (nombre, año y portada).
+Besides importing by Release ID, the menu also includes:
+- **Import Discogs List**: imports a whole list and creates one volume per release.
+- **Releases** sheet: keeps a catalog of imported albums (name, year and cover).
 
-## Uso
+## Usage
+Open Mulsa from the shortcut. Your Google Drive sheets show up as cards with cover and year. Pick one and press **Run**: it downloads the ticked songs into a `PLAYLIST NAME` subfolder of your music folder, showing the state of each song (searching, downloading, converting, done or failed).
 
-Abre Mulsa desde el acceso directo. Aparecen tus hojas de Google Drive como tarjetas con su portada. Pulsa una y empieza a descargar las canciones marcadas en la carpeta de música que configuraste, en una subcarpeta `NOMBRE PLAYLIST`.
+**Stop** stops and shuts down slskd. When the run finishes, the list shows the songs worth checking. **Copy log** copies a summary of what got downloaded plus the detailed log to the clipboard, in case you want to look into a failure. **Settings** (on the playlists screen) goes back to the settings screen.
 
-El log muestra cada búsqueda, el candidato elegido y el estado de la descarga. **Stop** para y cierra slskd. **Copy output** copia el log al portapapeles. **Settings** vuelve a la pantalla de configuración.
+If you untick a song that was already downloaded, the next run deletes it from the folder.
 
-Si desmarcas una canción ya descargada, la próxima ejecución la borra de la carpeta.
+### Status in the sheet
+The Status column shows `Downloaded`, `Downloaded (verify)` (check it: odd duration, or found through a search without artist) or `Failed, Do it manually`. Failed songs are retried on every run while they stay ticked.
 
-### Estado en la hoja
+## Common Problems
 
-En la columna Estado verás `Downloaded`, `Downloaded (verify)` (vino de una búsqueda sin artista, revísala) o `Failed, Do it manually`.
+### Soulseek cannot connect 
+If you are on a network that blocks Soulseek traffic (university wifi, company VPN), slskd cannot connect at all: try from another network.
 
-### Uso con GUI
+### The window is blank 
+Another program is using port 8765. Close it and open Mulsa again.
 
-También puedes ejecutar el gestor con interfaz gráfica:
+### Setting up the project on another computer
+No need to redo anything in Google Cloud or share the sheet again.
+1. Install from the same installer.
+2. Copy credentials.json from the other machine. If you don’t have it at hand, create a new key in the same service account (Credentials > the account > Keys > Add key > JSON). It does not invalidate the other laptop’s key.
+3. Fill in the settings.
 
-```bash
-start "" ".\.venv\Scripts\pythonw.exe" gui.py
-```
+## Project Structure
 
-En la GUI, escribe el nombre del spreadsheet, pulsa **Ejecutar** y revisa el log en tiempo real.
-
-## Problemas Comunes
-
-### Se queda en `Starting slskd...` y se rinde
-
-slskd no ha podido conectar. Lánzalo a mano para ver el motivo:
-
-& "$env:LOCALAPPDATA\Mulsa\tools\slskd\slskd.exe" --app-dir "$env:LOCALAPPDATA\Mulsa\tools\slskd_data"
-
-
-Si dice `Failed to start listening on 0.0.0.0:50300`, Windows tiene el puerto reservado (`netsh interface ipv4 show excludedportrange protocol=tcp`). Cambia el puerto en **Settings** a uno fuera de esos rangos, por ejemplo 2234.
-
-Si dice `username and/or password invalid`, revisa las credenciales de Soulseek en **Settings**.
-
-### Montar el proyecto en otro ordenador
-
-No hay que repetir nada de Google Cloud ni volver a compartir la hoja.
-1.  Instala desde el mismo instalador.
-2.  Copia el `credentials.json` del otro equipo. Si no lo tienes a mano, crea una clave nueva en la **misma** cuenta de servicio (Credenciales > la cuenta > Claves > Agregar clave > JSON). No invalida la del otro portátil.
-3.  Rellena el setup. 
-
-## Estructura del Proyecto
-
-*   `gui.py`: Interfaz gráfica (setup, selector de playlists, ejecución).
-*   `manager.py`: Orquesta una ejecución: arranca slskd, lee la hoja, descarga, apaga slskd.
-*   `bootstrap.py`: Primer arranque: descarga slskd y genera su configuración.
-*   `sheets.py`: Lectura y escritura de la hoja de Google.
-*   `downloader.py`: Estrategia de búsquedas (exacta, álbum, suelta, título, artista, último recurso).
-*   `matching.py`: Puntuación y filtrado de candidatos.
-*   `slskd_client.py`: Llamadas a la API de slskd y conversión FLAC a MP3.
-*   `tagging.py`: Limpieza de nombres y etiquetas ID3.
-*   `playlistHelper.gs`: Script para Google Sheets (Google Apps Script).
-*   `requirements.txt`: Lista de librerías de Python necesarias.
-*   `Mulsa.spec` e `installer.iss`: Generación del exe y del instalador.
+*   `main.py`: Starts the backend and opens the app window.
+*   `api.py`: HTTP API (FastAPI): playlists, runs, settings and live events for the interface.
+*   `web/`: Angular interface (playlists, runner, settings).
+*   `manager.py`: Orchestrates a run: starts slskd, reads the sheet, downloads, shuts slskd down.
+*   `bootstrap.py`: First run: downloads slskd and generates its configuration.
+*   `sheets.py`: Reads and writes the Google sheet; splits songs across threads.
+*   `downloader.py`: Search strategy (exact, album, loose, title, artist, queued retry, last resort).
+*   `matching.py`: Scores and filters candidates.
+*   `slskd_client.py`: slskd API calls, FLAC to MP3 conversion, user memory.
+*   `tagging.py`: Filename cleanup and ID3 tags.
+*   `log.py`: Event channel between the pipeline and the interface, plus the detailed log.
+*   `playlistHelper.gs`: Script for Google Sheets (Google Apps Script).
+*   `requirements.txt`: Python dependencies.
+*   `Mulsa.spec`, `installer.iss` and `.github/workflows/release.yml`: exe, installer and automatic release.

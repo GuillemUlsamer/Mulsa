@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 export interface Playlist { 
     name: string;
     cover_url: string | null;
+    year: string;
 }
 
 export interface Settings {
@@ -27,6 +28,7 @@ export interface LogEvent {
 export class Api {
     private http = inject(HttpClient);
     private base = '/api';
+    playlistsCache = signal<Playlist[]>([]);
     running = signal(false);
 
     playlists(){
@@ -63,7 +65,8 @@ export class Api {
                 subscriber.next(JSON.parse(e.data));
             };
             source.onerror = () => {
-                subscriber.error(new Error('Events stream lost'));
+                // EventSource reconecta solo (p. ej. tras un reinicio de uvicorn); no cerramos el stream
+                console.warn('events stream reconnecting...');
             };
             return () => source.close();
         });

@@ -1,12 +1,19 @@
-<h1>Playlists</h1>
-<div class="grid">
+<app-page heading="Playlists">
+  <button actions class="btn" routerLink="/settings">Settings</button>
+
+  <p class="hint">Choose a playlist to download</p>
+  <div class="grid">
     @for (p of playlists(); track p.name) {
-        <a class="card" [routerLink]="['/run', p.name]">
-            <img [src]="cover(p.name)" [alt]="p.name" />
-            <span>{{ p.name }}</span>
-        </a>
+      <a class="card" [routerLink]="['/run', p.name]">
+        <img [src]="cover(p.name)" [alt]="p.name" />
+        <div class="text">
+          <span class="name">{{ p.name }}</span>
+          <span class="sub">{{ p.year }}</span>
+        </div>
+      </a>
     }
-    @empty {
-        <span>Loading playlists from Drive...</span>
-    }
-</div>
+  </div>
+
+  <p footer class="available">{{ playlists().length }} playlists available</p>
+  <button footer class="btn" (click)="load()" [disabled]="loading()">Refresh</button>
+</app-page>

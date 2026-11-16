@@ -1,19 +1,24 @@
-@if (!api.running()) {
-    <button routerLink="/">Playlists</button>
-}
-<button (click)="run(name())" [disabled]="api.running()">Run</button>
-@if (api.running()) {
-    <button (click)="stop()">Stop</button>
-}
-<button (click)="copyLog()" [disabled]="api.running()">Copy Log</button>
+<app-page [heading]="name()">
+  @if (!api.running()) {
+    <button actions class="btn" routerLink="/">&lt; Playlists</button>
+  }
+  @if (api.running()) {
+    <button actions class="btn" (click)="stop()">Stop</button>
+  } @else {
+    <button actions class="btn btn-primary" (click)="run(name())">Run</button>
+  }
 
-<div class="list" #list>
+  <div class="list" #list>
     @for (i of items(); track $index) {
-        <div class="row" [class]="i.tag">
-            <span>{{ i.text }}</span>
-            @if (i.status) {
-                <span class="status">{{ i.status }}</span>
-            }
-        </div>
+      <div class="row" [class]="i.tag" [class.song]="i.id">
+        <span class="text">{{ i.text }}</span>
+        @if (i.status) {
+          <span class="status">{{ i.status }}</span>
+        }
+      </div>
     }
-</div>
+  </div>
+
+  <p footer class="state">{{ api.running() ? 'Running...' : 'Ready' }}</p>
+  <button footer class="btn" (click)="copyLog()" [disabled]="api.running()">Copy log</button>
+</app-page>
