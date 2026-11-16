@@ -1,9 +1,6 @@
-<header class="top">
-  <h1>Playlists</h1>
-  <button class="btn" routerLink="/settings">Settings</button>
-</header>
+<app-page heading="Playlists">
+  <button actions class="btn" routerLink="/settings">Settings</button>
 
-<main class="content">
   <p class="hint">Choose a playlist to download</p>
   <div class="grid">
     @for (p of playlists(); track p.name) {
@@ -16,9 +13,7 @@
       </a>
     }
   </div>
-</main>
 
-<footer class="bottom">
-  <p class="available">{{ playlists().length }} playlists available</p>
-  <button class="btn" (click)="load()" [disabled]="loading()">Refresh</button>
-</footer>
+  <p footer class="available">{{ playlists().length }} playlists available</p>
+  <button footer class="btn" (click)="load()" [disabled]="loading()">Refresh</button>
+</app-page>
