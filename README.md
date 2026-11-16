@@ -120,15 +120,15 @@ If you untick a song that was already downloaded, the next run deletes it from t
 ### Status in the sheet
 The Status column shows `Downloaded`, `Downloaded (verify)` (check it: odd duration, or found through a search without artist) or `Failed, Do it manually`. Failed songs are retried on every run while they stay ticked.
 
-## Problemas Comunes
+## Common Problems
 
-## Soulseek cannot connect ##
+### Soulseek cannot connect 
 If you are on a network that blocks Soulseek traffic (university wifi, company VPN), slskd cannot connect at all: try from another network.
 
-## The window is blank ##
+### The window is blank 
 Another program is using port 8765. Close it and open Mulsa again.
 
-## Setting up the project on another computer ##
+### Setting up the project on another computer
 No need to redo anything in Google Cloud or share the sheet again.
 1. Install from the same installer.
 2. Copy credentials.json from the other machine. If you don’t have it at hand, create a new key in the same service account (Credentials > the account > Keys > Add key > JSON). It does not invalidate the other laptop’s key.
