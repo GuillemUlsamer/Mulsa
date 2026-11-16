@@ -1,6 +1,11 @@
 <app-page [heading]="name()">
   @if (!api.running()) {
-    <button actions class="btn" routerLink="/">Playlists</button>
+    <button actions class="btn" routerLink="/">&lt; Playlists</button>
+  }
+  @if (api.running()) {
+    <button actions class="btn" (click)="stop()">Stop</button>
+  } @else {
+    <button actions class="btn btn-primary" (click)="run(name())">Run</button>
   }
 
   <div class="list" #list>
@@ -15,12 +20,5 @@
   </div>
 
   <p footer class="state">{{ api.running() ? 'Running...' : 'Ready' }}</p>
-  <div footer class="buttons">
-    <button class="btn" (click)="copyLog()" [disabled]="api.running()">Copy log</button>
-    @if (api.running()) {
-      <button class="btn" (click)="stop()">Stop</button>
-    } @else {
-      <button class="btn btn-primary" (click)="run(name())">Run</button>
-    }
-  </div>
+  <button footer class="btn" (click)="copyLog()" [disabled]="api.running()">Copy log</button>
 </app-page>
