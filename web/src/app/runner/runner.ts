@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, inject, signal, input, viewChild, Element
 import { Api, LogEvent } from '../api';
 import { Subscription } from 'rxjs';
 import { RouterLink } from '@angular/router';
+import { Page } from '../page/page';
 
 interface Item {
   id: string | null;
@@ -11,7 +12,7 @@ interface Item {
 }
 
 @Component({
-  imports: [RouterLink],
+  imports: [RouterLink, Page],
   selector: 'app-runner',
   styleUrl: './runner.scss',
   templateUrl: './runner.html',
@@ -28,8 +29,7 @@ export class Runner implements OnInit, OnDestroy {
   constructor() {
     effect(() => {
       this.items();
-      const el = this.list()?.nativeElement;
-      if (el) queueMicrotask(() => el.scrollTop = el.scrollHeight);
+      queueMicrotask(() => this.list()?.nativeElement.lastElementChild?.scrollIntoView({ block: 'end' }));
     });
   }
 
