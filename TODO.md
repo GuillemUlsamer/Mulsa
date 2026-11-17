@@ -1,26 +1,13 @@
 # TODO
 
-## 2. Rediseno: la estanteria
-Concepto: una playlist es un disco. Referencia: bingebrowse.net (videoclub 3D), pero sin escena 3D
-ni camara: CSS puro (perspective, rotateX/rotateY, scroll-snap, backdrop-filter). Sin edicion de
-marcas desde la app.
-- [ ] Figma solo de la pantalla Playlists, dos estados: estanteria en reposo y disco seleccionado.
-  Ahi se decide perspectiva, tamano de los discos y el panel de info.
-- [ ] Backend: contraportada. `import_release` guarda la segunda imagen de Discogs (columna L junto
-  a la portada); `/playlists` la devuelve. Hojas sin contraportada: reverso liso con el tracklist.
-- [ ] Backend: `/playlists` sigue rapido como hoy; un `GET /playlists/{name}/info` con volumenes,
-  marcadas y descargadas se pide solo para el disco seleccionado.
-- [ ] Estanteria: baldas con ligera perspectiva, discos con grosor (dos caras + rotateY), escala al
-  pasar el raton, etiqueta de supermercado debajo (nombre, ano, "12/24" descargadas) sobre la que
-  cae la sombra del disco.
-- [ ] Disco seleccionado: sale al centro con fondo oscuro y desenfocado, panel de info a la derecha,
-  boton "Back cover" (no girar al hacer clic: el clic abre), flechas para pasar al siguiente.
-- [ ] Entrar en el disco (Runner): `GET /playlists/{name}/tracks` por volumen (artista, titulo,
-  duracion, marcada, estado). Pantalla partida: lista a la izquierda (marcadas resaltadas, el
-  resto en gris) con selector de volumenes abajo; descarga a la derecha como ahora.
-- [ ] Transiciones: abrir (la portada escala y hace fade a la pantalla partida) y volver (fade al
-  disco, se cierra, estanteria). Si hay descarga en marcha, volver no la para.
-- [ ] Settings: sencillo, con el canguro entero al lado. Vigilar anchuras por debajo de 1100 px.
+## 2. Rediseno: restos
+Estanteria, disco seleccionado, apertura, runner, settings y setup estan hechos (handoffs en
+design_handoff_*). Queda:
+- [ ] Canguro: `web/public/kangaroo.png` (PNG con fondo transparente) para Settings, y el icono
+  24x24 en la cabecera de Playlists.
+- [ ] Volver del runner con la animacion inversa (hoy: fundido y el disco vuelve seleccionado).
+- [ ] Email de la cuenta junto a "Connected" en Settings (scope `userinfo.email` en gauth).
+- [ ] Capturas nuevas para el README.
 - [ ] Leer Refactoring UI.
 
 ## 3. Discogs y setup dentro de la app (sustituye al Apps Script)
