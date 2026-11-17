@@ -52,11 +52,13 @@
 .big-edge.b { transform: rotateX(-90deg) translateZ(calc(var(--big) / 2)); }
 
 .tray-face { position: absolute; inset: 0; transform: translateZ(-6px); background: #E3E5E8; }
-.lid { position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: 0 50%; transform: translateZ(8px) rotateY(0deg); }
+.lid { position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: 0 50%; transform: translateZ(8px) rotateY(0deg); transition: transform 1100ms cubic-bezier(.65, 0, .35, 1); }
 .is-opening .lid { transform: translateZ(8px) rotateY(-180deg); transition: transform 1100ms cubic-bezier(.65, 0, .35, 1) 300ms; }
 // el disco arranca rapido y va frenando mientras se abre la caja (vuelta y media)
 .is-opening .disc { animation: disc-turn 2.2s cubic-bezier(.1, .6, .2, 1) forwards; }
 @keyframes disc-turn { to { transform: rotate(540deg); } }
+// estado inicial de la animacion inversa: sin transiciones hasta el siguiente frame (va despues para ganar)
+.big.no-anim, .big.no-anim .lid { transition: none; }
 .lid-back { transform: rotateY(180deg); background: #ECEEF1; }
 .hinge { position: absolute; left: 0; top: 0; bottom: 0; width: 14px; background: rgba(255, 255, 255, .16); border-right: 1px solid rgba(0, 0, 0, .18); }
 

@@ -1,12 +1,12 @@
-<app-page heading="Mulsa" [shade]="true">
-  <button actions class="btn" routerLink="/setup">New playlist</button>
+<app-page heading="Mulsa" [shade]="true" [logo]="true">
+  <button actions class="btn" (click)="api.go(['/setup'])">New playlist</button>
   <button actions class="btn" (click)="addFromGoogle()">Add from Google</button>
   <button actions class="btn" (click)="importXlsx()">Import xlsx</button>
-  <button actions class="btn" routerLink="/settings">Settings</button>
+  <button actions class="btn" (click)="api.go(['/settings'])">Settings</button>
 
   <app-shelf [playlists]="playlists()" (select)="selected.set($event)" />
   @if (selected(); as sel) {
-    <app-record [playlists]="playlists()" [start]="playlists().indexOf(sel.p)" [originEl]="sel.el"
+    <app-record [playlists]="playlists()" [start]="playlists().indexOf(sel.p)" [originEl]="sel.el" [reverse]="reverse()"
       (close)="selected.set(null)" (open)="open($event)" (setup)="setup($event)" />
   }
 
