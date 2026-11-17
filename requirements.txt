@@ -3,8 +3,10 @@
 # Lo unico que hay que tener a mano es credentials.json (cuenta de servicio de Google).
 gspread
 google-auth
+google-auth-oauthlib
 requests
 mutagen
+openpyxl
 imageio-ffmpeg
 fastapi
 uvicorn

@@ -2,6 +2,12 @@
   @if (!api.running()) {
     <button actions class="btn" routerLink="/">&lt; Playlists</button>
   }
+  @if (!api.running() && isGoogle()) {
+    <button actions class="btn" [routerLink]="['/setup', name()]">Setup</button>
+  }
+  @if (!api.running()) {
+    <button actions class="btn" (click)="remove()">Delete</button>
+  }
   @if (api.running()) {
     <button actions class="btn" (click)="stop()">Stop</button>
   } @else {

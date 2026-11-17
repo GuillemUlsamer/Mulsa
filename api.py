@@ -2,6 +2,7 @@ import json
 import queue
 import threading
 import sys
+import webbrowser
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -10,9 +11,11 @@ from pathlib import Path
 
 import bootstrap
 import log
+import gauth
 import manager
 import sheets
 import webview
+import gspread
 
 api = FastAPI(title="Mulsa")
 _covers = {}  # diccionario de portadas de playlists, para que no se pidan cada vez
@@ -72,7 +75,7 @@ def events():
 def playlists():
     result = sheets.list_playlists(with_images=False)
     _covers.update({p["title"]: p["image_url"] for p in result})
-    return [{"name": p["title"], "cover_url": p["image_url"], "year": p["year"]} for p in result]
+    return [{"name": p["title"], "cover_url": p["image_url"], "year": p["year"], "source": p["source"]} for p in result]
 
 # busca la playlist por su nombre y devuelve la portada
 @api.get("/playlists/{name}/cover")
@@ -122,15 +125,81 @@ def get_settings():
     music_dir = config.get("music_dir", str(bootstrap.DEFAULT_MUSIC_DIR))
     share_dir = config.get("share_dir", "")
     listen_port = config.get("listen_port", bootstrap.LISTEN_PORT)
+    # discogs_token = config.get("discogs_token", "")
     credentials_file = str(bootstrap.CREDENTIALS_FILE)
+    drive_folder = config.get("drive_folder_name", "")
     return {
         "configured": configured,
         "soulseek_username": soulseek_username,
         "music_dir": music_dir,
         "share_dir": share_dir,
         "listen_port": listen_port,
-        "credentials_file": credentials_file
+        "credentials_file": credentials_file,
+        "drive_folder": drive_folder
+        # "discogs_token": discogs_token
     }
+
+@api.get("/auth/google")
+def google_status():
+    return {"connected": gauth.load_credentials() is not None}
+
+@api.get("/auth/google/picker")
+def google_picker():
+    creds = gauth.load_credentials()
+    return {"token": creds.token if creds else None, "api_key": gauth.PICKER_API_KEY, "app_id": gauth.PROJECT_NUMBER}
+
+# El selector de Google se abre en el navegador del sistema (ver web/public/picker.html).
+@api.post("/picker/open")
+def picker_open(body: dict):
+    webbrowser.open(body["origin"] + "/picker.html")
+    return {"status": "opened"}
+
+# Un enlace normal navegaria la ventana de Mulsa fuera de la app: las hojas se abren en el navegador.
+@api.post("/open-url")
+def open_url(body: dict):
+    url = body.get("url", "")
+    if not url.startswith("https://docs.google.com/"):
+        raise HTTPException(400, "only Google Docs links")
+    webbrowser.open(url)
+    return {"status": "opened"}
+
+# Recibe lo elegido en el selector. Las hojas quedan autorizadas en Google al elegirlas.
+# Una carpeta no da acceso a su contenido (limite de drive.file): solo se guarda como destino
+# donde Mulsa creara las playlists nuevas.
+@api.post("/playlists/google")
+def add_google_playlists(body: dict):
+    files = body.get("files", [])
+    folders = body.get("folders", [])
+    parts = []
+    if files:
+        parts.append(f"{len(files)} sheets added")
+    if folders:
+        if bootstrap.CONFIG_FILE.exists():
+            config = bootstrap.load_config()
+            config["drive_folder_id"] = folders[0]["id"]
+            config["drive_folder_name"] = folders[0]["name"]
+            with open(bootstrap.CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump(config, f, indent=2)
+        parts.append("folder saved for new playlists")
+    message = "Google playlists: " + (", ".join(parts) or "nothing selected") + "."
+    log.line(message, "done")
+    return {"message": message}
+
+@api.post("/auth/google")
+def google_login():
+    def work():
+        try:
+            gauth.login()
+            log.line("Google account connected.", "done")
+        except Exception as e:
+            log.line(f"Google login failed: {e}", "error")
+    threading.Thread(target=work, daemon=True).start()
+    return {"status": "started"}
+
+@api.delete("/auth/google")
+def google_logout():
+    gauth.logout()
+    return {"status": "ok"}
 
 # post de los settings
 @api.post("/settings")
@@ -142,8 +211,10 @@ def save_settings(body: dict):
     share = body.get("share_dir", "").strip() or None
     port = str(body.get("listen_port", bootstrap.LISTEN_PORT)).strip()
     creds = body.get("credentials_file", str(bootstrap.CREDENTIALS_FILE)).strip()
+    # discogs_token = body.get("discogs_token", "").strip()
 
-    # valido los datos
+    if not pwd:
+        pwd = bootstrap.read_soulseek_password() or ""
     if not user or not pwd:
         raise HTTPException(400, "Soulseek username and password are required.")
     if not music:
@@ -154,9 +225,6 @@ def save_settings(body: dict):
             raise ValueError()
     except ValueError:
         raise HTTPException(400, "The listen port must be a number between 1 and 65535")
-    if not creds:
-        raise HTTPException(400, "Select your Google credentials.json file.")
-
     def work():
         try: 
             bootstrap.run_setup(
@@ -164,9 +232,10 @@ def save_settings(body: dict):
                 password=pwd,
                 music_dir=music,
                 share_dir=share,
-                credentials_file=creds,
+                credentials_file=creds or None,
                 progress=log.line,
                 listen_port=port_num,
+                # discogs_token=discogs_token,
             )
         except Exception as e:
             log.line(f"Error during setup: {e}", "error")
@@ -182,8 +251,87 @@ def pick_folder():
     return {"path": result[0] if result else None}
 
 @api.post("/pick-file")
-def pick_file():
+def pick_file(types: str = "JSON (*.json)"):
     if window is None:
         raise HTTPException(501, "no native window")
-    result = window.create_file_dialog(webview.OPEN_DIALOG, file_types=("JSON (*.json)",))
+    result = window.create_file_dialog(webview.OPEN_DIALOG, file_types=(types,))
     return {"path": result[0] if result else None}
+
+@api.post("/playlists/import")
+def import_playlist():
+    if window is None:
+        raise HTTPException(501, "no native window")
+    result = window.create_file_dialog(webview.OPEN_DIALOG, file_types=("Excel (*.xlsx)",))
+    if not result:
+        return {"name": None}
+    return {"name": sheets.import_xlsx(result[0])}
+
+# ---------- crear y rellenar playlists de Google ----------
+def _config():
+    return bootstrap.load_config() if bootstrap.CONFIG_FILE.exists() else {}
+
+def _open_playlist(name):
+    client = sheets.setup_gspread()
+    if not client:
+        raise HTTPException(400, "Sign in with Google first.")
+    try:
+        return client.open(name)
+    except gspread.exceptions.SpreadsheetNotFound:
+        raise HTTPException(404, f"Playlist '{name}' not found in Google.")
+
+# Los imports hablan con Discogs y Google durante un rato: van en hilo y avisan por el log.
+def _background(fn, done_msg):
+    def work():
+        try:
+            fn()
+            log.line(done_msg, "done")
+        except Exception as e:
+            log.line(f"Import failed: {e}", "error")
+    threading.Thread(target=work, daemon=True).start()
+    return {"status": "started"}
+
+@api.delete("/playlists/{name}")
+def delete_playlist(name: str):
+    path = sheets.xlsx_path(name)
+    if path:
+        path.unlink()
+        return {"status": "deleted"}
+    client = sheets.setup_gspread()
+    if not client or not sheets.trash_sheet(client, name):
+        raise HTTPException(404, f"Playlist '{name}' not found.")
+    return {"status": "trashed"}
+
+@api.get("/playlists/{name}/volumes")
+def playlist_volumes(name: str):
+    spreadsheet = _open_playlist(name)
+    return {"url": spreadsheet.url,
+            "volumes": [ws.title for ws in spreadsheet.worksheets() if ws.title != sheets.RELEASES_SHEET]}
+
+@api.post("/playlists/new")
+def new_playlist(body: dict):
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(400, "Name is required.")
+    client = sheets.setup_gspread()
+    if not client:
+        raise HTTPException(400, "Sign in with Google first.")
+    spreadsheet = sheets.create_playlist(client, name, _config().get("drive_folder_id"))
+    sheets.setup_sheet(spreadsheet, int(body.get("volumes", 1)))
+    return {"name": name}
+
+@api.post("/playlists/{name}/setup")
+def setup_playlist(name: str, body: dict):
+    sheets.setup_sheet(_open_playlist(name), int(body.get("volumes", 1)))
+    return {"status": "ok"}
+
+@api.post("/playlists/{name}/import-list")
+def import_list(name: str, body: dict):
+    spreadsheet = _open_playlist(name)
+    token = _config().get("discogs_token", "")
+    return _background(lambda: sheets.import_list(spreadsheet, body["list_id"], token), "Import finished.")
+
+@api.post("/playlists/{name}/import-release")
+def import_release(name: str, body: dict):
+    spreadsheet = _open_playlist(name)
+    token = _config().get("discogs_token", "")
+    return _background(lambda: sheets.import_release(spreadsheet, body["volume"], body["release_id"], token), "Import finished.")

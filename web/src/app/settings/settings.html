@@ -4,9 +4,9 @@
     <input id="user" formControlName="soulseek_username" />
     <span></span>
 
-    <label for="pass">Soulseek password <span class="req">*</span></label>
-    <input id="pass" type="password" formControlName="soulseek_password" />
-    <span class="help">Created with this password if the account does not exist yet.</span>
+    <label for="pass">Soulseek password @if (!configured()) {<span class="req">*</span>}</label>
+    <input id="pass" type="password" formControlName="soulseek_password" [placeholder]="configured() ? '(unchanged)' : ''" />
+    <span class="help">Created with this password if the account does not exist yet. Leave blank to keep the current one.</span>
 
     <label for="music">Music folder <span class="req">*</span></label>
     <div class="control">
@@ -26,12 +26,29 @@
     <input id="port" type="number" formControlName="listen_port" class="short" />
     <span class="help">Change only if slskd fails to start.</span>
 
-    <label for="creds">credentials.json <span class="req">*</span></label>
+    <!-- Token personal de Discogs, sin uso: Mulsa va con las claves de la app (60 peticiones/min compartidas).
+    <label for="discogs">Discogs token</label>
+    <input id="discogs" formControlName="discogs_token" />
+    <span class="help">Optional. Your personal token from discogs.com/settings/developers.</span>
+    -->
+
+    <label>Google account</label>
+    <div class="control">
+      @if (google()) {
+        <span>Connected</span>
+        <button type="button" class="btn" (click)="googleLogout()">Sign out</button>
+      } @else {
+        <button type="button" class="btn" (click)="googleLogin()">Sign in with Google</button>
+      }
+    </div>
+    <span class="help">Opens your browser. Mulsa only sees the sheets you pick or create.</span>
+
+    <label for="creds">credentials.json</label>
     <div class="control">
       <input id="creds" formControlName="credentials_file" />
       <button type="button" class="btn" (click)="browse('credentials_file')">Browse...</button>
     </div>
-    <span class="help">Google service account with access to your sheets.</span>
+    <span class="help">Advanced: Google service account, for sheets shared with it.</span>
 
     <div class="buttons">
       <button class="btn btn-primary" type="submit" [disabled]="saving()">Save</button>

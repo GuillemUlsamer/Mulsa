@@ -6,6 +6,7 @@ export interface Playlist {
     name: string;
     cover_url: string | null;
     year: string;
+    source: 'google' | 'xlsx';
 }
 
 export interface Settings {
@@ -14,7 +15,9 @@ export interface Settings {
     music_dir: string;
     share_dir: string;
     listen_port: number;
+    // discogs_token: string;
     credentials_file: string;
+    drive_folder: string;
 }
 
 export interface LogEvent {
@@ -40,7 +43,7 @@ export class Api {
     log(){
         return this.http.get(`${this.base}/log`, { responseType: 'text' });
     }
-    saveSettings(body: Omit<Settings, 'configured'> & {soulseek_password: string}) {
+    saveSettings(body: Omit<Settings, 'configured' | 'drive_folder'> & {soulseek_password: string}) {
         return this.http.post(`${this.base}/settings`, body);
     }
     run(name: string){
@@ -57,6 +60,42 @@ export class Api {
     }
     pickFile(){
         return this.http.post<{path: string}>(`${this.base}/pick-file`, null);
+    }
+    importXlsx(){ 
+        return this.http.post<{name: string | null}>(`${this.base}/playlists/import`, {});
+    }
+    googleStatus(){ 
+        return this.http.get<{connected: boolean}>(`${this.base}/auth/google`); 
+    }
+    deletePlaylist(name: string) {
+        return this.http.delete(`${this.base}/playlists/${encodeURIComponent(name)}`);
+    }
+    volumes(name: string) {
+        return this.http.get<{url: string, volumes: string[]}>(`${this.base}/playlists/${encodeURIComponent(name)}/volumes`);
+    }
+    newPlaylist(name: string, volumes: number) {
+        return this.http.post<{name: string}>(`${this.base}/playlists/new`, { name, volumes });
+    }
+    setupPlaylist(name: string, volumes: number) {
+        return this.http.post(`${this.base}/playlists/${encodeURIComponent(name)}/setup`, { volumes });
+    }
+    importList(name: string, list_id: string) {
+        return this.http.post(`${this.base}/playlists/${encodeURIComponent(name)}/import-list`, { list_id });
+    }
+    importRelease(name: string, volume: string, release_id: string) {
+        return this.http.post(`${this.base}/playlists/${encodeURIComponent(name)}/import-release`, { volume, release_id });
+    }
+    openUrl(url: string) {
+        return this.http.post(`${this.base}/open-url`, { url });
+    }
+    openPicker(origin: string) {
+        return this.http.post(`${this.base}/picker/open`, { origin });
+    }
+    googleLogin(){ 
+        return this.http.post(`${this.base}/auth/google`, {}); 
+    }
+    googleLogout(){ 
+        return this.http.delete(`${this.base}/auth/google`); 
     }
     events(): Observable<LogEvent> {
         return new Observable(subscriber => {

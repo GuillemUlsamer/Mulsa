@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Mulsa</title>
+  <style>
+    body { margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center;
+           font-family: system-ui, sans-serif; background: #F9F9FA; color: #222; }
+    p { font-size: 18px; }
+  </style>
+  <script src="https://apis.google.com/js/api.js"></script>
+</head>
+<body>
+  <p id="msg">Opening Google Drive...</p>
+  <script>
+    // Esta pagina vive fuera de Angular: el selector de Google no funciona dentro de la ventana
+    // de Mulsa (WebView2 bloquea sus cookies), asi que se abre en el navegador del sistema.
+    const msg = document.getElementById('msg');
+    const FOLDER = 'application/vnd.google-apps.folder';
+
+    async function main() {
+      const cfg = await (await fetch('/api/auth/google/picker')).json();
+      if (!cfg.token) { msg.textContent = 'Sign in with Google in Mulsa settings first.'; return; }
+      gapi.load('picker', () => {
+        const view = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS)
+          .setIncludeFolders(true)
+          .setSelectFolderEnabled(true);
+        new google.picker.PickerBuilder()
+          .setOAuthToken(cfg.token)
+          .setDeveloperKey(cfg.api_key)
+          .setAppId(cfg.app_id)
+          .setOrigin(location.origin)
+          .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+          .addView(view)
+          .setCallback(onPick)
+          .build()
+          .setVisible(true);
+      });
+    }
+
+    async function onPick(data) {
+      if (data.action === google.picker.Action.CANCEL) { msg.textContent = 'Cancelled. You can close this tab.'; return; }
+      if (data.action !== google.picker.Action.PICKED) return;
+      const folders = data.docs.filter(d => d.mimeType === FOLDER).map(d => ({ id: d.id, name: d.name }));
+      const files = data.docs.filter(d => d.mimeType !== FOLDER).map(d => d.id);
+      const r = await fetch('/api/playlists/google', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files, folders }),
+      });
+      msg.textContent = (await r.json()).message + ' You can close this tab.';
+    }
+
+    main();
+  </script>
+</body>
+</html>

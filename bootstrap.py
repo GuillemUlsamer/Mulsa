@@ -16,6 +16,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 # Datos de la app: %LOCALAPPDATA%\Mulsa (Windows). Fuera del codigo.
 APP_DIR = Path(os.environ.get('LOCALAPPDATA', Path.home())) / 'Mulsa'
+PLAYLISTS_DIR = APP_DIR / 'playlists'
 
 # La app se llamaba Music Manager: si existe la carpeta vieja y no la nueva, se renombra
 # y se actualizan las rutas absolutas que config.json guarda (exe, app_dir).
@@ -35,6 +36,7 @@ CACHE_DIR = APP_DIR / 'cache'
 
 CONFIG_FILE = APP_DIR / 'config.json'
 CREDENTIALS_FILE = APP_DIR / 'credentials.json'
+GOOGLE_TOKEN_FILE = APP_DIR / 'google_token.json'
 
 # Carpeta de musica: la elige el usuario en la pantalla 0; esto es solo el valor por defecto.
 DEFAULT_MUSIC_DIR = Path.home() / 'Music' / 'Mulsa'
@@ -51,7 +53,8 @@ def incomplete_dir(music_dir):
     return Path(music_dir) / '_slskd_incomplete'
 
 def is_configured():
-    return all(p.exists() for p in (CONFIG_FILE, SLSKD_EXE, SLSKD_YML, CREDENTIALS_FILE))
+    google = CREDENTIALS_FILE.exists() or GOOGLE_TOKEN_FILE.exists()
+    return google and all(p.exists() for p in (CONFIG_FILE, SLSKD_EXE, SLSKD_YML))
 
 def load_config():
     with open(CONFIG_FILE, encoding='utf-8') as f:
@@ -157,8 +160,8 @@ def run_setup(username, password, music_dir, share_dir=None, credentials_file=No
     if credentials_file and Path(credentials_file) != CREDENTIALS_FILE:
         progress("Copying credentials.json...")
         shutil.copyfile(credentials_file, CREDENTIALS_FILE)
-    if not CREDENTIALS_FILE.exists():
-        raise RuntimeError("credentials.json is missing (Google service account).")
+    if not CREDENTIALS_FILE.exists() and not GOOGLE_TOKEN_FILE.exists():
+        raise RuntimeError("Sign in with Google or select a credentials.json (service account).")
 
     download_slskd(progress)
 
@@ -167,7 +170,9 @@ def run_setup(username, password, music_dir, share_dir=None, credentials_file=No
     api_key = api_key or secrets.token_hex(24)
     write_slskd_yml(username, password, api_key, music_dir, share_dir, listen_port)
 
-    config = {
+    # Partimos de la config existente para no perder claves que escriben otros (drive_folder_id...).
+    config = load_config() if CONFIG_FILE.exists() else {}
+    config.update({
         'url': f'http://127.0.0.1:{WEB_PORT}/api/v0',
         'api_key': api_key,
         'music_dir': str(music_dir),
@@ -178,7 +183,10 @@ def run_setup(username, password, music_dir, share_dir=None, credentials_file=No
         'share_dir': share_dir or '',
         'yml_version': YML_VERSION,
         'listen_port': listen_port,
-    }
+        # Token personal de Discogs, sin uso: Mulsa va con las claves de la app. Si algun dia
+        # hace falta, anadir discogs_token='' a la firma de run_setup y descomentar.
+        # 'discogs_token': discogs_token,
+    })
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2)
     progress("Setup complete.")

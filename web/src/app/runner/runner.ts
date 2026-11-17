@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject, signal, input, viewChild, ElementRef, effect} from '@angular/core';
 import { Api, LogEvent } from '../api';
 import { Subscription } from 'rxjs';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Page } from '../page/page';
 
 interface Item {
@@ -20,11 +20,24 @@ interface Item {
 
 export class Runner implements OnInit, OnDestroy {
   api = inject(Api);
+  private router = inject(Router);
   private sub?: Subscription;
   items = signal<Item[]>([]);
   name = input.required<string>();
   private inReview = false;
   private list = viewChild<ElementRef<HTMLElement>>('list');
+  // las xlsx no tienen setup: esa pagina solo trabaja con hojas de Google
+  // Google: a la papelera de Drive; xlsx: borra la copia local. La musica descargada no se toca.
+  remove() {
+    const what = this.isGoogle() ? 'Send the sheet to the Drive trash?' : 'Remove the imported xlsx from Mulsa?';
+    if (!confirm(`${what}\nDownloaded music is kept.`)) return;
+    this.api.deletePlaylist(this.name()).subscribe({
+      next: () => { this.api.playlistsCache.set([]); this.router.navigateByUrl('/'); },
+      error: e => alert(e.error?.detail ?? 'Could not delete'),
+    });
+  }
+
+  isGoogle = () => this.api.playlistsCache().find(p => p.name === this.name())?.source !== 'xlsx';
 
   constructor() {
     effect(() => {

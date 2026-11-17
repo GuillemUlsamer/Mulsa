@@ -5,7 +5,6 @@ __pycache__/
 slskd_config.json
 _test/
 .cache/
-_test/
 diag_search.py
 tools/
 config.json
@@ -14,3 +13,5 @@ dist/
 desktop.ini
 installer/
 NOTES.md
+assets/google_client.json
+assets/discogs_client.json

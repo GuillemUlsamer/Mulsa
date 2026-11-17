@@ -1,4 +1,4 @@
-const DISCOGS_TOKEN = "bJGcsTjCeCfrDHmLxCEqbLCipDUAvLliBesoOkHy";
+const DISCOGS_TOKEN = "put_your_token_here";
 const USER_AGENT = "MusicManagerApp/1.0";
 const RELEASES_SHEET_NAME = "Releases";
 
