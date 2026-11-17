@@ -111,7 +111,11 @@ Besides importing by Release ID, the menu also includes:
 - **Releases** sheet: keeps a catalog of imported albums (name, year and cover).
 
 ## Usage
-Open Mulsa from the shortcut. Your Google Drive sheets show up as cards with cover and year. Pick one and press **Run**: it downloads the ticked songs into a `PLAYLIST NAME` subfolder of your music folder, showing the state of each song (searching, downloading, converting, done or failed).
+Open Mulsa from the shortcut. Your playlists show up as cards with cover and year. To add them:
+- **Add from Google** opens a Google Drive picker in your browser. Pick the sheets you want (several at once with Shift); Mulsa only sees the sheets you pick there or creates itself, so a sheet you make by hand in Drive has to be picked once. Picking a folder saves it as the place where Mulsa creates new playlists.
+- **Import xlsx** loads a spreadsheet exported from Google Sheets (File > Download > xlsx) with the same column layout. Mulsa keeps a copy and writes the status there.
+
+Pick a playlist and press **Run**: it downloads the ticked songs into a `PLAYLIST NAME` subfolder of your music folder, showing the state of each song (searching, downloading, converting, done or failed).
 
 **Stop** stops and shuts down slskd. When the run finishes, the list shows the songs worth checking. **Copy log** copies a summary of what got downloaded plus the detailed log to the clipboard, in case you want to look into a failure. **Settings** (on the playlists screen) goes back to the settings screen.
 
