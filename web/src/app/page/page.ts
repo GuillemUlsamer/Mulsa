@@ -8,4 +8,6 @@ import { Component, input } from '@angular/core';
 })
 export class Page {
   heading = input.required<string>();
+  // fondo gris en el contenido, para separarlo de cabecera y pie (lo usa la estanteria)
+  shade = input(false);
 }

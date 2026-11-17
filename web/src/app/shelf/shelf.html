@@ -15,7 +15,7 @@
               </div>
             </div>
             <div class="cast" [style.left.px]="s.left + 4" [style.top.px]="B - 14" [style.width.px]="COVER - 8"></div>
-            <div class="record" [style.left.px]="s.left" (click)="select.emit(s.p)">
+            <div class="record" #rec [attr.data-name]="s.p.name" [style.left.px]="s.left" (click)="select.emit({ p: s.p, el: rec })">
               <div class="edge edge-top"></div>
               <div class="edge edge-l"></div>
               <div class="edge edge-r"></div>

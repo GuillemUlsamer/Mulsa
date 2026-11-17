@@ -7,6 +7,8 @@ const COVER = 176;
 const PAD = 40;
 const B = PAD + COVER;
 const ROW_H = 310;
+// padding lateral del host (shelf.scss): no cuenta como ancho util
+const SIDE = 24;
 // baldas que se ven siempre, aunque esten vacias
 const MIN_ROWS = 4;
 
@@ -30,7 +32,7 @@ interface Slot {
 })
 export class Shelf implements OnDestroy {
   playlists = input.required<Playlist[]>();
-  select = output<Playlist>();
+  select = output<{ p: Playlist; el: HTMLElement }>();
 
   readonly COVER = COVER;
   readonly B = B;
@@ -43,8 +45,8 @@ export class Shelf implements OnDestroy {
   constructor() {
     // El ancho real solo existe cuando el elemento esta pintado; ResizeObserver lo sigue despues.
     afterNextRender(() => {
-      this.width.set(this.host.nativeElement.clientWidth);
-      this.observer = new ResizeObserver(() => this.width.set(this.host.nativeElement.clientWidth));
+      this.width.set(this.host.nativeElement.clientWidth - SIDE * 2);
+      this.observer = new ResizeObserver(() => this.width.set(this.host.nativeElement.clientWidth - SIDE * 2));
       this.observer.observe(this.host.nativeElement);
     });
   }
@@ -53,11 +55,11 @@ export class Shelf implements OnDestroy {
     this.observer?.disconnect();
   }
 
-  // Reparte las playlists en filas de 4 a 6 huecos segun el ancho; se recalcula sola
+  // Reparte las playlists en filas de tantos huecos como quepan (minimo 4) segun el ancho; se recalcula sola
   // cuando cambian las playlists o el ancho (computed).
   rows = computed<Slot[][]>(() => {
     const W = Math.max(600, this.width());
-    const per = Math.max(4, Math.min(6, Math.floor(W / (COVER + 44))));
+    const per = Math.max(4, Math.floor(W / (COVER + 44)));
     const slotW = W / per;
     const tagW = Math.min(slotW - 20, COVER - 16);
     const list = this.playlists();

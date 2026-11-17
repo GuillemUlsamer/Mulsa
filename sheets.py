@@ -37,6 +37,7 @@ COL_STATUS = 6    # Column G
 COL_NOTES = 7     # Column H
 COL_YEAR = 9      # Column J
 COL_COVER = 10    # Column K
+COL_BACK = 11     # Column L (contraportada, solo en hojas importadas desde la app)
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -52,9 +53,13 @@ class GoogleSource:
         self._ws = {}
 
     # Devuelve [(titulo_volumen, filas)], filas como listas de strings (lo que da get_all_values).
+    # Una sola peticion (batchGet) para todos los volumenes en vez de una por pestana.
     def volumes(self):
         self._ws = {ws.title: ws for ws in self.sheet.worksheets()}
-        return [(title, ws.get_all_values()) for title, ws in self._ws.items()]
+        titles = list(self._ws)
+        res = self.sheet.values_batch_get([f"'{t}'" for t in titles])
+        ranges = res.get('valueRanges', [])
+        return [(t, (ranges[i].get('values', []) if i < len(ranges) else [])) for i, t in enumerate(titles)]
 
     def set_status(self, volume, row_num, text):
         self._ws[volume].update_cell(row_num, COL_STATUS + 1, text)
@@ -276,7 +281,8 @@ def import_release(spreadsheet, vol_title, release_id, token=''):
     year = data.get('year', '')
     images = data.get('images') or []
     cover = images[0].get('uri', '') if images else ''
-    ws.update(values=[[album, year, cover]], range_name='I1:K1')
+    back = images[1].get('uri', '') if len(images) > 1 else ''
+    ws.update(values=[[album, year, cover, back]], range_name='I1:L1')
 
     rows = []
     cumulative = 0
@@ -328,6 +334,29 @@ def import_list(spreadsheet, list_id, token='', progress=log.line):
         progress(f'Importing release {i}/{len(items)}...')
         album = import_release(spreadsheet, f'V {i}', item['id'], token)
         progress(f'V {i}: {album}')
+
+# Detalle de una playlist para la ficha: temas por volumen, marcadas, descargadas y
+# contraportada. Lee todos los volumenes, asi que solo se pide para el disco seleccionado.
+def playlist_info(source):
+    volumes = []
+    marked = downloaded = 0
+    back = ''
+    for vol_title, rows in source.volumes():
+        header = rows[0] if rows else []
+        if not back and len(header) > COL_BACK:
+            back = header[COL_BACK]
+        tracks = []
+        for row in rows[1:]:
+            if len(row) <= COL_CHECKBOX or not (row[COL_ARTIST].strip() or row[COL_TITLE].strip()):
+                continue
+            is_marked = row[COL_CHECKBOX].lower() == 'true'
+            status = row[COL_STATUS] if len(row) > COL_STATUS else ''
+            marked += is_marked
+            downloaded += is_marked and 'Downloaded' in status
+            tracks.append({'n': row[0].strip(), 'artist': row[COL_ARTIST], 'title': row[COL_TITLE],
+                           'marked': is_marked, 'status': status})
+        volumes.append({'title': vol_title, 'tracks': tracks})
+    return {'volumes': volumes, 'marked': marked, 'downloaded': downloaded, 'back_cover_url': back or None}
 
 # para limpiar el formato de duración, que tenga sentido
 def parse_duration(duration_val):

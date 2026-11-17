@@ -19,6 +19,7 @@ import gspread
 
 api = FastAPI(title="Mulsa")
 _covers = {}  # diccionario de portadas de playlists, para que no se pidan cada vez
+_backs = {}   # contraportadas, rellenado al pedir la ficha de una playlist
 
 BASE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 WEB_DIR = BASE_DIR / 'web' / 'dist' / 'web' / 'browser'
@@ -84,6 +85,32 @@ def playlist_cover(name: str):
     if not url:
         raise HTTPException(404, "playlist has no cover")
     return Response(content=sheets.fetch_image(url), media_type="image/jpeg")
+
+# Ficha de una playlist (disco seleccionado): temas, contadores y contraportada.
+@api.get("/playlists/{name}/info")
+def playlist_info(name: str):
+    path = sheets.xlsx_path(name)
+    try:
+        source = sheets.XlsxSource(path) if path else sheets.GoogleSource(_client(), name)
+    except gspread.exceptions.SpreadsheetNotFound:
+        raise HTTPException(404, f"Playlist '{name}' not found.")
+    info = sheets.playlist_info(source)
+    _backs[name] = info.pop("back_cover_url")
+    info["back_cover"] = bool(_backs[name])
+    return info
+
+@api.get("/playlists/{name}/back-cover")
+def playlist_back_cover(name: str):
+    url = _backs.get(name)
+    if not url:
+        raise HTTPException(404, "playlist has no back cover")
+    return Response(content=sheets.fetch_image(url), media_type="image/jpeg")
+
+def _client():
+    client = sheets.setup_gspread()
+    if not client:
+        raise HTTPException(400, "Sign in with Google first.")
+    return client
 
 # ---------- ejecucion ----------
 _run_thread = None

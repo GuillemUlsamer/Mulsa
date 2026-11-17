@@ -1,10 +1,14 @@
-<app-page heading="Mulsa">
+<app-page heading="Mulsa" [shade]="true">
   <button actions class="btn" routerLink="/setup">New playlist</button>
   <button actions class="btn" (click)="addFromGoogle()">Add from Google</button>
   <button actions class="btn" (click)="importXlsx()">Import xlsx</button>
   <button actions class="btn" routerLink="/settings">Settings</button>
 
-  <app-shelf [playlists]="playlists()" (select)="open($event)" />
+  <app-shelf [playlists]="playlists()" (select)="selected.set($event)" />
+  @if (selected(); as sel) {
+    <app-record [playlists]="playlists()" [start]="playlists().indexOf(sel.p)" [originEl]="sel.el"
+      (close)="selected.set(null)" (open)="open($event)" (setup)="setup($event)" />
+  }
 
   <p footer class="available">{{ playlists().length }} playlists</p>
   <button footer class="btn" (click)="load()" [disabled]="loading()">Refresh</button>

@@ -4,9 +4,10 @@ import { Subscription } from 'rxjs';
 import { Api, Playlist } from '../api';
 import { Page } from '../page/page';
 import { Shelf } from '../shelf/shelf';
+import { SelectedRecord } from '../record/record';
 
 @Component({
-  imports: [RouterLink, Page, Shelf],
+  imports: [RouterLink, Page, Shelf, SelectedRecord],
   selector: 'app-playlists',
   styleUrl: './playlists.scss',
   templateUrl: './playlists.html',
@@ -18,6 +19,7 @@ export class Playlists implements OnInit, OnDestroy {
   playlists = this.api.playlistsCache;
   loading = signal(false);
   private sub?: Subscription;
+  selected = signal<{ p: Playlist; el: HTMLElement } | null>(null);
 
   ngOnInit() { 
     if (this.playlists().length === 0) this.load();
@@ -41,6 +43,10 @@ export class Playlists implements OnInit, OnDestroy {
 
   open(p: Playlist) {
     this.router.navigate(['/run', p.name]);
+  }
+
+  setup(p: Playlist) {
+    this.router.navigate(['/setup', p.name]);
   }
   
   // El selector se abre en el navegador del sistema; nos enteramos de que ha acabado por el log.

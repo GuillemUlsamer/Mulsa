@@ -10,6 +10,21 @@ export interface Playlist {
     source: 'google' | 'xlsx';
 }
 
+export interface Track {
+    n: string;
+    artist: string;
+    title: string;
+    marked: boolean;
+    status: string;
+}
+
+export interface PlaylistInfo {
+    volumes: { title: string; tracks: Track[] }[];
+    marked: number;
+    downloaded: number;
+    back_cover: boolean;
+}
+
 export interface Settings {
     configured: boolean;
     soulseek_username: string;
@@ -67,6 +82,9 @@ export class Api {
     }
     googleStatus(){ 
         return this.http.get<{connected: boolean}>(`${this.base}/auth/google`); 
+    }
+    info(name: string) {
+        return this.http.get<PlaylistInfo>(`${this.base}/playlists/${encodeURIComponent(name)}/info`);
     }
     deletePlaylist(name: string) {
         return this.http.delete(`${this.base}/playlists/${encodeURIComponent(name)}`);
