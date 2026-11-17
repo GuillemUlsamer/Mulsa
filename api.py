@@ -137,6 +137,11 @@ def get_settings():
 def google_status():
     return {"connected": gauth.load_credentials() is not None}
 
+@api.get("/auth/google/picker")
+def google_picker():
+    creds = gauth.load_credentials()
+    return {"token": creds.token if creds else None, "api_key": gauth.PICKER_API_KEY, "app_id": gauth.PROJECT_NUMBER}
+
 @api.post("/auth/google")
 def google_login():
     def work():

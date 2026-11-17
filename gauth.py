@@ -10,6 +10,8 @@ import bootstrap
 
 # drive.file: solo las hojas que el usuario elige o que Mulsa crea. No sensible, sin verificacion.
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
+PICKER_API_KEY = 'AIzaSyAYtlucCy8k1q5kxnz2sHfhSbSgIu_Su-Q'
+PROJECT_NUMBER = '822697319414'
 CLIENT_FILE = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent)) / 'assets' / 'google_client.json'
 TOKEN_FILE = bootstrap.GOOGLE_TOKEN_FILE
 

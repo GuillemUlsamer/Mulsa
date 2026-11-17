@@ -3,6 +3,8 @@ import { RouterLink, Router} from '@angular/router';
 import { Api, Playlist } from '../api';
 import { Page } from '../page/page';
 
+declare const gapi: any;
+declare const google: any;
 
 @Component({
   imports: [RouterLink, Page],
@@ -13,6 +15,7 @@ import { Page } from '../page/page';
 
 export class Playlists implements OnInit {
   private api = inject(Api);
+  private router = inject(Router);
   playlists = this.api.playlistsCache;
   loading = signal(false);
 
@@ -34,5 +37,25 @@ export class Playlists implements OnInit {
 
   cover(name_playlist: string) {
     return `/api/playlists/${encodeURIComponent( name_playlist )}/cover`;
+  }
+  
+  addFromGoogle() {
+    this.api.pickerConfig().subscribe(cfg => {
+      if (!cfg.token) { this.router.navigateByUrl('/settings'); return; }
+      gapi.load('picker', () => {
+        const picker = new google.picker.PickerBuilder()
+          .setOAuthToken(cfg.token)
+          .setDeveloperKey(cfg.api_key)
+          .setAppId(cfg.app_id)
+          .setOrigin(location.protocol + '//' + location.host)
+          .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+          .addView(google.picker.ViewId.SPREADSHEETS)
+          .setCallback((data: any) => {
+            if (data.action === google.picker.Action.PICKED) this.load();
+          })
+          .build();
+        picker.setVisible(true);
+      });
+    });
   }
 }
