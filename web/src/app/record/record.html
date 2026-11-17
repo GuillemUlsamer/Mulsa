@@ -15,11 +15,13 @@
       <div class="big" #big [class.is-flipped]="flipped()">
         <div class="big-edge t"></div><div class="big-edge b"></div><div class="big-edge l"></div><div class="big-edge r"></div>
         <div class="big-face big-front">
+          <img class="blur" [src]="cover(p.name)" alt="" />
           <img [src]="cover(p.name)" [alt]="p.name" />
           <div class="hinge"></div>
         </div>
         <div class="big-face big-back">
           @if (info()?.back_cover) {
+            <img class="blur" [src]="backCover(p.name)" alt="" />
             <img [src]="backCover(p.name)" [alt]="p.name + ' back cover'" />
           } @else {
             <div class="tracklist">

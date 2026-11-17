@@ -38,8 +38,9 @@
 // gira de derecha a izquierda (angulo negativo)
 .big.is-flipped { transform: rotateX(3deg) rotateY(-188deg); }
 .big-face { position: absolute; inset: 0; overflow: hidden; backface-visibility: hidden; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); background: #DDD; }
-// contain: la imagen entera; lo que no cubra se ve del gris del plastico, como en una caja de CD
-.big-face img { width: 100%; height: 100%; object-fit: contain; display: block; background: #ECEEF1; }
+// contain: la imagen entera; detras, la misma imagen ampliada y desenfocada rellena lo que falte
+.big-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+.big-face img.blur { object-fit: cover; filter: blur(24px) brightness(.9); transform: scale(1.3); }
 .big-front { transform: translateZ(calc(var(--big-depth) / 2)); }
 .hinge { position: absolute; left: 0; top: 0; bottom: 0; width: 14px; background: rgba(255, 255, 255, .16); border-right: 1px solid rgba(0, 0, 0, .18); }
 .big-back { transform: rotateY(180deg) translateZ(calc(var(--big-depth) / 2)); background: #ECEEF1; }
