@@ -330,6 +330,7 @@ def import_release(spreadsheet, vol_title, release_id, token=''):
                             'fields': 'userEnteredFormat.horizontalAlignment'}},
         ]})
     _append_release(spreadsheet, album, year, cover)
+    log.line(f'{vol_title}: {album} · {len(rows)} tracks')
     return album
 
 def _append_release(spreadsheet, album, year, cover):
@@ -350,8 +351,7 @@ def import_list(spreadsheet, list_id, token='', progress=log.line):
     setup_sheet(spreadsheet, len(items))
     for i, item in enumerate(items, start=1):
         progress(f'Importing release {i}/{len(items)}...')
-        album = import_release(spreadsheet, f'V {i}', item['id'], token)
-        progress(f'V {i}: {album}')
+        import_release(spreadsheet, f'V {i}', item['id'], token)
 
 # Detalle de una playlist para la ficha: temas por volumen, marcadas, descargadas y
 # contraportada. Lee todos los volumenes, asi que solo se pide para el disco seleccionado.

@@ -30,6 +30,9 @@ export class Settings implements OnInit, OnDestroy {
   saving = signal(false);
   google = signal(false);
   configured = signal(false);
+  advanced = signal(false);
+  mascot = signal(true);
+  error = signal(false);
   private sub?: Subscription;
 
   ngOnInit() {
@@ -64,11 +67,13 @@ export class Settings implements OnInit, OnDestroy {
 
   save() {
     this.saving.set(true);
+    this.error.set(false);
     this.status.set('Setting up...');
     this.api.saveSettings(this.form.getRawValue()).subscribe({
       next: () => this.router.navigateByUrl('/'),
       error: e => { 
         this.saving.set(false); 
+        this.error.set(true);
         this.status.set(e.error?.detail ?? 'Error'); 
       },
     });

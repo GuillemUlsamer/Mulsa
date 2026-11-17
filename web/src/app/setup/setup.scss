@@ -1,18 +1,69 @@
-.grid {
-  display: grid; grid-template-columns: 140px 460px; column-gap: 12px; row-gap: 2px;
-  align-items: center;
-}
-label { font-size: 14px; color: #1F242E; }
+// Valores del diseno: design_handoff_mulsa_settings_setup/README.md
+:host { --text: #1F242E; --muted: #5B6472; --faint: #8A93A0; --border: #DBE0E6; --paper: #ECEEF1; }
+:host * { box-sizing: border-box; }
+
+.halves { flex: 1; min-height: 0; display: flex; margin: 0 -48px -24px; }
+.col { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.paper { width: 40%; flex: none; display: flex; flex-direction: column; min-height: 0; background: var(--paper); border-left: 1px solid var(--border); }
+
+// ---------- formulario (modo A) ----------
+.form { padding: 40px 48px 48px 72px; overflow-y: auto; > * { max-width: 600px; } }
+h2 { margin: 0 0 16px; padding-bottom: 8px; font-size: 16px; font-weight: 700; line-height: 20px; border-bottom: 1px solid var(--border); }
+.grid { display: grid; grid-template-columns: 140px 1fr; column-gap: 16px; row-gap: 18px; }
+label { font-size: 14px; line-height: 26px; }
 input {
-  box-sizing: border-box; width: 100%; height: 26px; padding: 0 6px; font: inherit; font-size: 14px;
-  background: #fff; border: 1px solid #ADB5BD; border-radius: 2px;
-  &:focus { outline: none; border-color: #1F242E; }
-  &.short { width: 100px; }
+  width: 100%; height: 26px; padding: 0 8px; font: inherit; font-size: 14px; background: #fff;
+  border: 1px solid #ADB5BD; border-radius: 2px; color: var(--text);
+  &:focus { outline: none; border-color: var(--text); }
+  &::placeholder { color: var(--faint); }
+  &[type=number] { font-variant-numeric: tabular-nums; }
 }
-.control { display: flex; gap: 6px; input { flex: 1; } }
-.help { grid-column: 2; font-size: 12px; color: #6E7582; margin-bottom: 10px; }
-span:empty { grid-column: 2; margin-bottom: 4px; }
-.intro { grid-column: 1 / -1; margin: 0 0 14px; font-size: 14px; color: #1F242E; max-width: 612px; }
-.or { grid-column: 1 / -1; margin: 0 0 10px; font-size: 12px; color: #6E7582; text-transform: uppercase; }
-.status { margin: 0; font-size: 12px; color: #6E7582; }
-.req { color: #d93025; }
+.control { display: flex; gap: 6px; align-items: center; input { flex: 1; } }
+.help { margin: 4px 0 0; font-size: 12px; line-height: 16px; color: var(--muted); &.strong { color: var(--text); } }
+.req { color: #D93025; }
+
+// caja vacia con el nombre (misma construccion que la de la pantalla 2, a 360px)
+.preview { align-items: center; justify-content: center; }
+.stage { position: relative; width: 360px; height: 360px; perspective: 1800px; }
+.case { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateX(3deg) rotateY(-8deg); }
+.edge { position: absolute; background: #C3C7CC; }
+.edge.l, .edge.r { top: 0; left: 172px; width: 16px; height: 360px; }
+.edge.t, .edge.b { left: 0; top: 172px; width: 360px; height: 16px; }
+.edge.l { transform: rotateY(-90deg) translateZ(180px); }
+.edge.r { transform: rotateY(90deg) translateZ(180px); }
+.edge.t { transform: rotateX(90deg) translateZ(180px); background: #E8EAED; }
+.edge.b { transform: rotateX(-90deg) translateZ(180px); }
+.front { position: absolute; inset: 0; transform: translateZ(8px); background: var(--paper); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); padding: 28px 28px 24px 40px; display: flex; flex-direction: column; }
+.hinge { position: absolute; left: 0; top: 0; bottom: 0; width: 14px; background: rgba(255, 255, 255, .4); border-right: 1px solid rgba(0, 0, 0, .12); }
+.case-name { flex: 1; font-size: 34px; font-weight: 900; font-style: italic; text-transform: uppercase; line-height: .92; text-wrap: balance; overflow-wrap: anywhere; &.empty { color: var(--faint); } }
+.case-foot { display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid #C3C7CC; font-size: 12px; color: var(--muted); }
+.floor { position: absolute; left: 30px; right: 30px; bottom: -30px; height: 36px; background: rgba(20, 24, 32, .30); filter: blur(20px); border-radius: 50%; }
+
+// ---------- modo B ----------
+.head { height: 76px; flex: none; display: flex; flex-direction: column; justify-content: center; border-bottom: 1px solid #D5D9DE; padding: 0 48px;
+  .title { font-size: 20px; font-weight: 700; line-height: 24px; }
+  .sub { font-size: 13px; line-height: 18px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } }
+.paper .head { padding: 0 32px; }
+.options { display: grid; grid-template-columns: 1fr auto 1fr; column-gap: 32px; padding: 28px 48px 32px; border-bottom: 1px solid var(--border); flex: none; }
+.o-title { font-size: 16px; font-weight: 700; }
+.option .control { margin-top: 14px; }
+.list-id { max-width: 180px; }
+.count { width: 80px; }
+.or { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--faint);
+  &::before, &::after { content: ''; flex: 1; width: 1px; background: var(--border); } }
+.activity { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 48px 24px; }
+.a-head { display: flex; justify-content: space-between; align-items: baseline; .title { font-size: 16px; font-weight: 700; } .pct { font-size: 13px; color: var(--muted); } }
+.bar { height: 4px; margin-top: 8px; background: #E6E9ED; border-radius: 2px; overflow: hidden; > div { height: 100%; background: var(--text); } }
+.a-row { display: grid; grid-template-columns: 36px 1fr auto; gap: 12px; height: 26px; align-items: center; font-size: 13px; border-bottom: 1px solid #EDEFF2;
+  .v { color: var(--faint); font-variant-numeric: tabular-nums; }
+  .what { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .result { color: var(--muted); &.ok { color: #1E8E5A; font-weight: 700; } &.err { color: #D93025; font-weight: 700; } } }
+.activity .a-head + .a-row, .activity .bar + .a-row { margin-top: 12px; }
+
+.rows { flex: 1; min-height: 0; overflow-y: auto; padding: 0 32px; }
+.v-row { display: grid; grid-template-columns: 36px 1fr 120px auto; gap: 8px; align-items: center; min-height: 38px; border-bottom: 1px solid #DDE0E4;
+  .v { font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .name { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .n { font-size: 12px; color: var(--faint); margin-left: 8px; } }
+
+.status { margin: 0; font-size: 13px; color: var(--muted); &.error { color: #D93025; } }

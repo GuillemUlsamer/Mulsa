@@ -1,53 +1,107 @@
-<app-page [heading]="name() ?? 'New playlist'">
-  <button actions class="btn" routerLink="/">&lt; Playlists</button>
+<app-page [heading]="name() ?? 'New playlist'" [divided]="true">
+  <button back class="btn" type="button" routerLink="/">&lsaquo; Playlists</button>
   @if (name()) {
     <button actions class="btn" (click)="openInDrive()" [disabled]="!sheetUrl()">Open in Drive</button>
-  }
-  @if (name()) {
-    <button actions class="btn" [routerLink]="['/run', name()]">Run</button>
+    <button actions class="btn btn-primary" [routerLink]="['/run', name()]">Run</button>
   }
 
-  <div class="grid">
-    @if (!name()) {
-      <label for="pname">Name <span class="req">*</span></label>
-      <div class="control">
-        <input id="pname" [(ngModel)]="newName" [disabled]="busy()" />
-        <button type="button" class="btn btn-primary" (click)="create()" [disabled]="busy()">Create</button>
-      </div>
-      <span class="help">
-        @if (driveFolder()) { Created in your Drive folder "{{ driveFolder() }}" } @else { Created in the root of your Drive (pick a folder with Add from Google) }
-        with a Releases sheet and one volume.
-      </span>
-    } @else {
-      <p class="intro">Either import a Discogs list (one volume per release), or set up N volumes and import a release into each one.
-        Mulsa writes straight into the sheet: open it in Drive to watch the progress.</p>
-
-      <label for="list">Discogs list</label>
-      <div class="control">
-        <input id="list" [(ngModel)]="listId" placeholder="List ID" [disabled]="busy()" />
-        <button type="button" class="btn btn-primary" (click)="importList()" [disabled]="busy()">Import list</button>
-      </div>
-      <span class="help">One volume per release in the list. Replaces the current volumes.</span>
-
-      <p class="or">or</p>
-
-      <label for="vols">Volumes</label>
-      <div class="control">
-        <input id="vols" type="number" min="1" class="short" [(ngModel)]="volumeCount" [disabled]="busy()" />
-        <button type="button" class="btn" (click)="setup()" [disabled]="busy()">Set up</button>
-      </div>
-      <span class="help">Creates empty volumes V 1..N with headers; then import a release into each.</span>
-
-      @for (v of volumes(); track v) {
-        <label>{{ v }}</label>
-        <div class="control">
-          <input [(ngModel)]="releaseIds[v]" placeholder="Release ID" [disabled]="busy()" />
-          <button type="button" class="btn" (click)="importRelease(v)" [disabled]="busy()">Import</button>
+  @if (!name()) {
+    <!-- modo A: crear -->
+    <div class="halves">
+      <div class="col form">
+        <h2>New playlist</h2>
+        <div class="grid">
+          <label for="pname">Name <span class="req">*</span></label>
+          <div>
+            <div class="control">
+              <input id="pname" [(ngModel)]="newName" placeholder="e.g. Hardcore Overdose" [disabled]="busy()" (keydown.enter)="create()" />
+              <button type="button" class="btn btn-primary" (click)="create()" [disabled]="busy()">Create</button>
+            </div>
+            <p class="help">
+              @if (driveFolder()) { Created in your Drive folder "{{ driveFolder() }}" } @else { Created in the root of your Drive (pick a folder with Add from Google) }
+              with a Releases sheet and one volume.
+            </p>
+          </div>
         </div>
-        <span></span>
-      }
-    }
-  </div>
+      </div>
+      <!-- caja vacia que ensena el nombre segun lo escribes -->
+      <div class="paper preview">
+        <div class="stage">
+          <div class="case">
+            <div class="edge t"></div><div class="edge b"></div><div class="edge l"></div><div class="edge r"></div>
+            <div class="front">
+              <div class="hinge"></div>
+              <div class="case-name" [class.empty]="!newName.trim()">{{ newName.trim() || 'Untitled playlist' }}</div>
+              <div class="case-foot"><span>Vol. 1</span><span>No cover yet</span></div>
+            </div>
+          </div>
+          <div class="floor"></div>
+        </div>
+      </div>
+    </div>
+  } @else {
+    <!-- modo B: rellenar volumenes -->
+    <div class="halves">
+      <div class="col fill">
+        <div class="head">
+          <div class="title">Fill the volumes</div>
+          <div class="sub">Import a whole Discogs list, or create empty volumes and import one release into each.</div>
+        </div>
+        <div class="options">
+          <div class="option">
+            <div class="o-title">Import a Discogs list</div>
+            <p class="help">One volume per release in the list. Replaces the current volumes.</p>
+            <div class="control">
+              <input class="list-id" [(ngModel)]="listId" placeholder="List ID" [disabled]="busy()" (keydown.enter)="importList()" />
+              <button type="button" class="btn btn-primary" (click)="importList()" [disabled]="busy()">Import list</button>
+            </div>
+          </div>
+          <div class="or"><span>OR</span></div>
+          <div class="option">
+            <div class="o-title">Set up volumes</div>
+            <p class="help">Creates empty volumes V 1..N with headers; then import a release into each one.</p>
+            <p class="help strong">Use a Discogs <b>release</b> ID (discogs.com/release/…), not a master ID (discogs.com/master/…).</p>
+            <div class="control">
+              <input class="count" type="number" min="1" [(ngModel)]="volumeCount" [disabled]="busy()" />
+              <button type="button" class="btn" (click)="setup()" [disabled]="busy()">Set up</button>
+            </div>
+          </div>
+        </div>
+        <div class="activity">
+          <div class="a-head">
+            <span class="title">{{ activityTitle() }}</span>
+            @if (progress(); as pr) { <span class="pct">{{ pr.pct }}%</span> }
+          </div>
+          @if (progress(); as pr) { <div class="bar"><div [style.width.%]="pr.pct"></div></div> }
+          @for (r of imports(); track $index) {
+            <div class="a-row">
+              <span class="v">{{ r.vol }}</span>
+              <span class="what">{{ r.what }}</span>
+              <span class="result" [class.ok]="r.ok === true" [class.err]="r.ok === false">{{ r.result }}</span>
+            </div>
+          }
+        </div>
+      </div>
+      <div class="paper volumes">
+        <div class="head">
+          <div class="title">Volumes</div>
+          <div class="sub">{{ volumes().length }} volumes · {{ totalTracks() }} tracks</div>
+        </div>
+        <div class="rows">
+          @for (v of volumes(); track v.title) {
+            <div class="v-row">
+              <span class="v">{{ v.title }}</span>
+              <span class="name">
+                @if (v.album) { {{ v.album }} <span class="n">{{ v.tracks.length }} tracks</span> } @else { <span class="n">Empty</span> }
+              </span>
+              <input [(ngModel)]="releaseIds[v.title]" placeholder="Release ID" [disabled]="busy()" (keydown.enter)="importRelease(v.title)" />
+              <button type="button" class="btn" (click)="importRelease(v.title)" [disabled]="busy()">Import</button>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
 
-  <p footer class="status">{{ status() }}</p>
+  <p footer class="status" [class.error]="error()">{{ status() }}</p>
 </app-page>
