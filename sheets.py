@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 warnings.filterwarnings('ignore', message='.*Python version.*past its end of life.*')
 
 import gspread
-from gspread.urls import DRIVE_FILES_API_V3_URL
+from gspread.urls import DRIVE_FILES_API_V3_URL, SPREADSHEET_URL
 from google.oauth2.service_account import Credentials
 import requests
 
@@ -35,8 +35,10 @@ COL_DURATION = 3
 COL_CHECKBOX = 5  # Column F
 COL_STATUS = 6    # Column G
 COL_NOTES = 7     # Column H
+COL_ALBUM = 8     # Column I
 COL_YEAR = 9      # Column J
 COL_COVER = 10    # Column K
+COL_BACK = 11     # Column L (contraportada, solo en hojas importadas desde la app)
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -52,9 +54,13 @@ class GoogleSource:
         self._ws = {}
 
     # Devuelve [(titulo_volumen, filas)], filas como listas de strings (lo que da get_all_values).
+    # Una sola peticion (batchGet) para todos los volumenes en vez de una por pestana.
     def volumes(self):
         self._ws = {ws.title: ws for ws in self.sheet.worksheets()}
-        return [(title, ws.get_all_values()) for title, ws in self._ws.items()]
+        titles = list(self._ws)
+        res = self.sheet.values_batch_get([f"'{t}'" for t in titles])
+        ranges = res.get('valueRanges', [])
+        return [(t, (ranges[i].get('values', []) if i < len(ranges) else [])) for i, t in enumerate(titles)]
 
     def set_status(self, volume, row_num, text):
         self._ws[volume].update_cell(row_num, COL_STATUS + 1, text)
@@ -123,12 +129,13 @@ def list_xlsx_playlists():
         try:
             wb = openpyxl.load_workbook(p, read_only=True)
             row = next(wb.worksheets[0].iter_rows(min_row=2, max_row=2, max_col=3, values_only=True), ())
+            volumes = sum(1 for n in wb.sheetnames if n != RELEASES_SHEET)
             wb.close()
         except Exception:
-            row = ()
+            row, volumes = (), 0
         year = _cell_text(row[1]) if len(row) > 1 else ''
         match = IMAGE_URL_RE.search(str(row[2]) if len(row) > 2 else '')
-        result.append({'title': p.stem, 'id': None, 'image_url': match.group(1) if match else None, 'image': None, 'year': year, 'source': 'xlsx'})
+        result.append({'title': p.stem, 'id': None, 'image_url': match.group(1) if match else None, 'image': None, 'year': year, 'volumes': volumes, 'source': 'xlsx'})
     return result
 
 def setup_gspread():
@@ -145,16 +152,18 @@ IMAGE_URL_RE = re.compile(r'=IMAGE\(\s*"([^"]+)"', re.IGNORECASE)
 
 COVER_CACHE_DIR = bootstrap.CACHE_DIR / 'covers'
 
+# Dos peticiones: titulos de las pestanas (para contar volumenes) y A2:C2 de la primera
+# (ano y formula de la portada). No se pueden juntar: con `ranges` la API solo devuelve las
+# pestanas que tocan el rango. Devuelve (url_portada, ano, volumenes).
 def _read_header(client, spreadsheet_id):
-    params = {'valueRenderOption': 'FORMULA'}
-    try:
-        data = client.http_client.values_get(spreadsheet_id, 'A2:C2', params=params)
-    except AttributeError:
-        data = client.open_by_key(spreadsheet_id).values_get('A2:C2', params=params)
+    meta = client.http_client.request('get', SPREADSHEET_URL % spreadsheet_id,
+                                      params={'fields': 'sheets.properties.title'}).json()
+    volumes = sum(1 for sh in meta.get('sheets', []) if sh['properties']['title'] != RELEASES_SHEET)
+    data = client.http_client.values_get(spreadsheet_id, 'A2:C2', params={'valueRenderOption': 'FORMULA'})
     row = (data.get('values') or [[]])[0]
     year = row[1] if len(row) > 1 else ''
     match = IMAGE_URL_RE.search(row[2] if len(row) > 2 else '')
-    return (match.group(1) if match else None), str(year)
+    return (match.group(1) if match else None), str(year), volumes
 
 def fetch_image(url, timeout=10):
     COVER_CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -186,16 +195,20 @@ def trash_sheet(client, name):
             return True
     return False
 
-def list_playlists(with_images=True, workers=8):
+# details=False: solo nombres (rapido); la portada, el ano y los volumenes se piden despues
+# por playlist con playlist_header, para que la estanteria se vaya llenando segun llegan.
+def list_playlists(with_images=True, workers=8, details=True):
     client = setup_gspread()
     if not client:
         return list_xlsx_playlists()
     files = sorted(_list_sheets(client), key=lambda f: f['name'].lower())
-    playlists = [{'title': f['name'], 'id': f['id'], 'image_url': None, 'image': None, 'year': '', 'source': 'google'} for f in files]
+    playlists = [{'title': f['name'], 'id': f['id'], 'image_url': None, 'image': None, 'year': '', 'volumes': 0, 'source': 'google'} for f in files]
+    if not details:
+        return list_xlsx_playlists() + playlists
 
     def fill(p):
         try:
-            p['image_url'], p['year'] = _read_header(client, p['id'])
+            p['image_url'], p['year'], p['volumes'] = _read_header(client, p['id'])
             if with_images and p['image_url']:
                 p['image'] = fetch_image(p['image_url'])
         except Exception:
@@ -204,6 +217,19 @@ def list_playlists(with_images=True, workers=8):
     with ThreadPoolExecutor(max_workers=workers) as pool:
         list(pool.map(fill, playlists))
     return list_xlsx_playlists() + playlists
+
+# spreadsheet_id evita volver a listar Drive por cada playlist (la lista rapida ya lo dio).
+def playlist_header(name, spreadsheet_id=None):
+    if xlsx_path(name):
+        for p in list_xlsx_playlists():
+            if p['title'] == name:
+                return p['image_url'], p['year'], p['volumes']
+    client = setup_gspread()
+    if not client:
+        return None, '', 0
+    if not spreadsheet_id:
+        spreadsheet_id = next((f['id'] for f in _list_sheets(client) if f['name'] == name), None)
+    return _read_header(client, spreadsheet_id) if spreadsheet_id else (None, '', 0)
 
 # ---------- crear y rellenar playlists (lo que hacia playlistHelper.gs) ----------
 # Formato (anchos, casillas, ocultar columnas...) no tiene atajo en gspread: va por
@@ -273,7 +299,8 @@ def import_release(spreadsheet, vol_title, release_id, token=''):
     year = data.get('year', '')
     images = data.get('images') or []
     cover = images[0].get('uri', '') if images else ''
-    ws.update(values=[[album, year, cover]], range_name='I1:K1')
+    back = images[1].get('uri', '') if len(images) > 1 else ''
+    ws.update(values=[[album, year, cover, back]], range_name='I1:L1')
 
     rows = []
     cumulative = 0
@@ -303,6 +330,7 @@ def import_release(spreadsheet, vol_title, release_id, token=''):
                             'fields': 'userEnteredFormat.horizontalAlignment'}},
         ]})
     _append_release(spreadsheet, album, year, cover)
+    log.line(f'{vol_title}: {album} · {len(rows)} tracks')
     return album
 
 def _append_release(spreadsheet, album, year, cover):
@@ -323,8 +351,33 @@ def import_list(spreadsheet, list_id, token='', progress=log.line):
     setup_sheet(spreadsheet, len(items))
     for i, item in enumerate(items, start=1):
         progress(f'Importing release {i}/{len(items)}...')
-        album = import_release(spreadsheet, f'V {i}', item['id'], token)
-        progress(f'V {i}: {album}')
+        import_release(spreadsheet, f'V {i}', item['id'], token)
+
+# Detalle de una playlist para la ficha: temas por volumen, marcadas, descargadas y
+# contraportada. Lee todos los volumenes, asi que solo se pide para el disco seleccionado.
+def playlist_info(source):
+    volumes = []
+    marked = downloaded = 0
+    back = ''
+    for vol_title, rows in source.volumes():
+        if vol_title == RELEASES_SHEET:
+            continue
+        header = rows[0] if rows else []
+        if not back and len(header) > COL_BACK:
+            back = header[COL_BACK]
+        tracks = []
+        for row_num, row in enumerate(rows[1:], start=2):
+            if len(row) <= COL_CHECKBOX or not (row[COL_ARTIST].strip() or row[COL_TITLE].strip()):
+                continue
+            is_marked = row[COL_CHECKBOX].lower() == 'true'
+            status = row[COL_STATUS] if len(row) > COL_STATUS else ''
+            marked += is_marked
+            downloaded += is_marked and 'Downloaded' in status
+            tracks.append({'n': row[0].strip(), 'row': row_num, 'artist': row[COL_ARTIST], 'title': row[COL_TITLE],
+                           'marked': is_marked, 'status': status})
+        album = header[COL_ALBUM] if len(header) > COL_ALBUM else ''
+        volumes.append({'title': vol_title, 'album': album, 'tracks': tracks})
+    return {'volumes': volumes, 'marked': marked, 'downloaded': downloaded, 'back_cover_url': back or None}
 
 # para limpiar el formato de duración, que tenga sentido
 def parse_duration(duration_val):

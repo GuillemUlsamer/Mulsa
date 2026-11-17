@@ -6,7 +6,24 @@ export interface Playlist {
     name: string;
     cover_url: string | null;
     year: string;
+    volumes: number;
     source: 'google' | 'xlsx';
+}
+
+export interface Track {
+    n: string;
+    row: number;
+    artist: string;
+    title: string;
+    marked: boolean;
+    status: string;
+}
+
+export interface PlaylistInfo {
+    volumes: { title: string; album: string; tracks: Track[] }[];
+    marked: number;
+    downloaded: number;
+    back_cover: boolean;
 }
 
 export interface Settings {
@@ -32,13 +49,26 @@ export class Api {
     private http = inject(HttpClient);
     private base = '/api';
     playlistsCache = signal<Playlist[]>([]);
+    // true: la lista cambio (run, setup...); Playlists la recarga por detras sin vaciarla
+    playlistsStale = signal(false);
     running = signal(false);
+    // ficha ya cargada en la pantalla 2, para que el runner abra con los datos listos
+    infoCache = new Map<string, PlaylistInfo>();
 
+    playlistsQuick(){
+        return this.http.get<Playlist[]>(`${this.base}/playlists`, { params: { details: false } });
+    }
+    header(name: string){
+        return this.http.get<{cover_url: string | null, year: string, volumes: number}>(`${this.base}/playlists/${encodeURIComponent(name)}/header`);
+    }
     playlists(){
         return this.http.get<Playlist[]>(`${this.base}/playlists`);
     }
     settings(){
         return this.http.get<Settings>(`${this.base}/settings`);
+    }
+    summary(){
+        return this.http.get(`${this.base}/summary`, { responseType: 'text' });
     }
     log(){
         return this.http.get(`${this.base}/log`, { responseType: 'text' });
@@ -66,6 +96,9 @@ export class Api {
     }
     googleStatus(){ 
         return this.http.get<{connected: boolean}>(`${this.base}/auth/google`); 
+    }
+    info(name: string) {
+        return this.http.get<PlaylistInfo>(`${this.base}/playlists/${encodeURIComponent(name)}/info`);
     }
     deletePlaylist(name: string) {
         return this.http.delete(`${this.base}/playlists/${encodeURIComponent(name)}`);

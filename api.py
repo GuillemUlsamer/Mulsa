@@ -19,6 +19,8 @@ import gspread
 
 api = FastAPI(title="Mulsa")
 _covers = {}  # diccionario de portadas de playlists, para que no se pidan cada vez
+_backs = {}   # contraportadas, rellenado al pedir la ficha de una playlist
+_ids = {}     # nombre -> id de Google, para no listar Drive en cada peticion de cabecera
 
 BASE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 WEB_DIR = BASE_DIR / 'web' / 'dist' / 'web' / 'browser'
@@ -72,10 +74,19 @@ def events():
 # with_images=False porque la imagen va por su propio endpoint (abajo); asi la lista
 # responde rapido y Angular pide cada portada por separado con <img src=...>.
 @api.get("/playlists")
-def playlists():
-    result = sheets.list_playlists(with_images=False)
-    _covers.update({p["title"]: p["image_url"] for p in result})
-    return [{"name": p["title"], "cover_url": p["image_url"], "year": p["year"], "source": p["source"]} for p in result]
+def playlists(details: bool = True):
+    result = sheets.list_playlists(with_images=False, details=details)
+    _ids.update({p["title"]: p["id"] for p in result if p["id"]})
+    if details:
+        _covers.update({p["title"]: p["image_url"] for p in result})
+    return [{"name": p["title"], "cover_url": p["image_url"], "year": p["year"], "volumes": p["volumes"], "source": p["source"]} for p in result]
+
+# portada, ano y volumenes de una playlist; la estanteria lo pide por cada una tras la lista rapida
+@api.get("/playlists/{name}/header")
+def playlist_header(name: str):
+    cover_url, year, volumes = sheets.playlist_header(name, _ids.get(name))
+    _covers[name] = cover_url
+    return {"cover_url": cover_url, "year": year, "volumes": volumes}
 
 # busca la playlist por su nombre y devuelve la portada
 @api.get("/playlists/{name}/cover")
@@ -84,6 +95,32 @@ def playlist_cover(name: str):
     if not url:
         raise HTTPException(404, "playlist has no cover")
     return Response(content=sheets.fetch_image(url), media_type="image/jpeg")
+
+# Ficha de una playlist (disco seleccionado): temas, contadores y contraportada.
+@api.get("/playlists/{name}/info")
+def playlist_info(name: str):
+    path = sheets.xlsx_path(name)
+    try:
+        source = sheets.XlsxSource(path) if path else sheets.GoogleSource(_client(), name)
+    except gspread.exceptions.SpreadsheetNotFound:
+        raise HTTPException(404, f"Playlist '{name}' not found.")
+    info = sheets.playlist_info(source)
+    _backs[name] = info.pop("back_cover_url")
+    info["back_cover"] = bool(_backs[name])
+    return info
+
+@api.get("/playlists/{name}/back-cover")
+def playlist_back_cover(name: str):
+    url = _backs.get(name)
+    if not url:
+        raise HTTPException(404, "playlist has no back cover")
+    return Response(content=sheets.fetch_image(url), media_type="image/jpeg")
+
+def _client():
+    client = sheets.setup_gspread()
+    if not client:
+        raise HTTPException(400, "Sign in with Google first.")
+    return client
 
 # ---------- ejecucion ----------
 _run_thread = None
@@ -105,6 +142,10 @@ def stop():
 @api.get("/status")
 def status():
     return {"running": bool(_run_thread and _run_thread.is_alive())}
+
+@api.get("/summary")
+def run_summary():
+    return Response(content=log.summary_text(), media_type="text/plain")
 
 @api.get("/log")
 def full_log():

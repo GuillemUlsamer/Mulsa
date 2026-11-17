@@ -1,0 +1,33 @@
+@for (row of rows(); track $index; let first = $first) {
+  <div class="row" [style.height.px]="ROW_H">
+    <div class="back" [class.first]="first" [style.top.px]="first ? 0 : -34" [style.bottom.px]="ROW_H - B + 10"></div>
+    <div class="board-top" [style.top.px]="B - 10"></div>
+    <div class="board-front" [style.top.px]="B + 8"></div>
+    <div class="slots">
+      @for (s of row; track $index) {
+        <div class="slot" [style.width.px]="s.w" [style.perspective-origin]="s.originX + 'px -260px'">
+          @if (s.p) {
+            <div class="tag" [style.left.px]="s.tagLeft" [style.top.px]="B + 12" [style.width.px]="s.tagW">
+              <div class="tag-name">{{ s.p.name }}</div>
+              <div class="tag-meta">
+                <span class="tag-year">{{ s.p.year }}</span>
+                <span class="tag-vols" [class.pending]="!s.p.volumes">{{ s.p.volumes ? vols(s.p.volumes) : '…' }}</span>
+              </div>
+            </div>
+            <div class="cast" [style.left.px]="s.left + 4" [style.top.px]="B - 14" [style.width.px]="COVER - 8"></div>
+            <div class="record" #rec [attr.data-name]="s.p.name" [style.left.px]="s.left">
+              <div class="edge edge-top"></div>
+              <div class="edge edge-l"></div>
+              <div class="edge edge-r"></div>
+              <div class="face">
+                @if (s.p.cover_url) { <img [src]="cover(s.p.name)" [alt]="s.p.name" /> }
+              </div>
+            </div>
+            <!-- zona de raton fija: el disco crece al pasar por encima, pero el area que lo detecta no se mueve -->
+            <div class="hit" [style.left.px]="s.left" (click)="select.emit({ p: s.p, el: rec })"></div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}

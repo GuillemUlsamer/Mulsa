@@ -1,0 +1,106 @@
+// Valores del diseno: design_handoff_mulsa_selected_record/README.md
+:host {
+  --text: #1F242E; --muted: #5B6472; --faint: #8A93A0; --border: #DBE0E6;
+  --case-top: #E8EAED; --case-side: #C3C7CC;
+  --big: 420px; --big-depth: 16px;
+  --ease: cubic-bezier(.2, .7, .2, 1); --flip-ease: cubic-bezier(.45, .05, .25, 1);
+  position: fixed; inset: 0; z-index: 50; display: block;
+}
+:host * { box-sizing: border-box; }
+
+.scrim { position: absolute; inset: 0; background: rgba(31, 36, 46, .40); backdrop-filter: blur(8px); }
+.icon-btn {
+  position: absolute; padding: 0; border: 1px solid var(--border); background: #FFF; color: var(--text);
+  border-radius: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;
+  font-family: inherit; z-index: 2;
+  &:hover { background: #F0F2F5; }
+}
+.close { top: 20px; right: 24px; width: 32px; height: 32px; font-size: 22px; }
+.arrow { top: 50%; margin-top: -20px; width: 40px; height: 40px; font-size: 28px; padding-bottom: 3px; }
+.arrow.prev { left: 32px; }
+.arrow.next { right: 32px; }
+
+// disco y ficha centrados juntos; el escenario tiene la perspectiva
+.stage-wrap { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 56px; pointer-events: none; }
+.stage { position: relative; width: var(--big); height: var(--big); flex: none; perspective: 1800px; pointer-events: auto; }
+// girar: flecha circular bajo el disco; cuando esta del reves, la flecha tambien
+.flip-btn {
+  position: absolute; left: 50%; bottom: -64px; width: 44px; height: 32px; margin-left: -22px; padding: 0;
+  border: 1px solid var(--border); background: #FFF; color: var(--text); border-radius: 2px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: transform 600ms var(--flip-ease);
+  &:hover { background: #F0F2F5; }
+  &.is-flipped { transform: scaleX(-1); }
+}
+.floor-shadow { position: absolute; left: 36px; right: 36px; bottom: -34px; height: 40px; background: rgba(20, 24, 32, .50); filter: blur(22px); border-radius: 50%; }
+
+// caja con seis caras: el dorso (contraportada), los cantos, la bandeja con el disco y la
+// tapa, que gira sobre su borde izquierdo al abrir. El giro de toda la caja (flip) ensena el dorso.
+.big { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateX(3deg) rotateY(-8deg); transition: transform 600ms var(--flip-ease); }
+.big.is-flipped { transform: rotateX(3deg) rotateY(-188deg); }
+.big.is-opening { transform: none; transition: transform 1000ms cubic-bezier(.65, 0, .35, 1); }
+.big-face, .lid-face { position: absolute; inset: 0; overflow: hidden; backface-visibility: hidden; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); background: #DDD; }
+// contain: la imagen entera; detras, la misma imagen ampliada y desenfocada rellena lo que falte
+.big-face img, .lid-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+.big-face img.blur, .lid-face img.blur { object-fit: cover; filter: blur(24px) brightness(.9); transform: scale(1.3); }
+.big-back { transform: rotateY(180deg) translateZ(calc(var(--big-depth) / 2)); background: #ECEEF1; }
+.big-edge { position: absolute; background: var(--case-side); }
+.big-edge.l, .big-edge.r { top: 0; left: calc((var(--big) - var(--big-depth)) / 2); width: var(--big-depth); height: var(--big); }
+.big-edge.t, .big-edge.b { left: 0; top: calc((var(--big) - var(--big-depth)) / 2); width: var(--big); height: var(--big-depth); }
+.big-edge.l { transform: rotateY(-90deg) translateZ(calc(var(--big) / 2)); }
+.big-edge.r { transform: rotateY(90deg) translateZ(calc(var(--big) / 2)); }
+.big-edge.t { transform: rotateX(90deg) translateZ(calc(var(--big) / 2)); background: var(--case-top); }
+.big-edge.b { transform: rotateX(-90deg) translateZ(calc(var(--big) / 2)); }
+
+.tray-face { position: absolute; inset: 0; transform: translateZ(-6px); background: #E3E5E8; }
+.lid { position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: 0 50%; transform: translateZ(8px) rotateY(0deg); }
+.is-opening .lid { transform: translateZ(8px) rotateY(-180deg); transition: transform 1100ms cubic-bezier(.65, 0, .35, 1) 300ms; }
+// el disco arranca rapido y va frenando mientras se abre la caja (vuelta y media)
+.is-opening .disc { animation: disc-turn 2.2s cubic-bezier(.1, .6, .2, 1) forwards; }
+@keyframes disc-turn { to { transform: rotate(540deg); } }
+.lid-back { transform: rotateY(180deg); background: #ECEEF1; }
+.hinge { position: absolute; left: 0; top: 0; bottom: 0; width: 14px; background: rgba(255, 255, 255, .16); border-right: 1px solid rgba(0, 0, 0, .18); }
+
+// dorso sin imagen: lista de temas a dos columnas
+.tracklist { position: absolute; inset: 0; padding: 24px 24px 20px 34px; display: flex; flex-direction: column; gap: 12px; color: var(--text); }
+.tl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--case-side); padding-bottom: 8px; }
+.tl-name { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-year { font-size: 12px; color: var(--muted); }
+.tl-cols { flex: 1; min-height: 0; column-count: 2; column-gap: 20px; column-fill: auto; overflow: hidden; }
+.tl-vol { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 3px; break-after: avoid; }
+.tl-track { display: flex; gap: 6px; font-size: 10.5px; line-height: 14px; break-inside: avoid; }
+.tl-track .n { color: var(--faint); font-variant-numeric: tabular-nums; flex: none; }
+.tl-track .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tl-gap { height: 8px; }
+
+.panel {
+  width: 320px; flex: none; pointer-events: auto; background: #FFF; border: 1px solid var(--border); border-radius: 2px;
+  padding: 24px; display: flex; flex-direction: column; box-shadow: 0 12px 32px rgba(20, 24, 32, .18); color: var(--text);
+}
+.p-name { font-size: 32px; font-weight: 700; line-height: 34px; text-wrap: balance; }
+.p-sub { font-size: 16px; color: var(--muted); margin-top: 6px; }
+.p-stats { margin-top: 20px; border-top: 1px solid var(--border); }
+.p-row { display: flex; justify-content: space-between; align-items: baseline; padding: 9px 0; }
+.p-row + .p-row { padding-bottom: 8px; }
+.p-row:first-child { border-bottom: 1px solid var(--border); }
+.p-label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.p-val { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.p-bar { height: 4px; background: #E6E9ED; border-radius: 2px; overflow: hidden; }
+.p-bar > div { height: 100%; background: var(--text); }
+.p-actions { margin-top: 24px; display: flex; gap: 6px; }
+.p-actions .btn { min-width: 72px; padding: 0 14px; }
+
+// bandeja y disco (design_handoff_mulsa_runner/README.md)
+.tray { position: absolute; inset: 0; background: #E3E5E8; border: 1px solid #C9CDD2; }
+.ring { position: absolute; left: 3%; top: 3%; width: 94%; height: 94%; border-radius: 50%; background: #DADDE1; box-shadow: inset 0 1px 3px rgba(31, 36, 46, .18); }
+.notch { position: absolute; top: 42%; width: 4%; height: 16%; background: #D0D3D8; }
+.notch.l { left: 0; border-radius: 0 6px 6px 0; }
+.notch.r { right: 0; border-radius: 6px 0 0 6px; }
+.clip { position: absolute; left: 0; width: 2.5%; height: 9%; background: #CDD1D6; border: 1px solid #BFC4CA; }
+.clip.t { top: 6%; }
+.clip.b { bottom: 6%; }
+.disc { position: absolute; left: 6%; top: 6%; width: 88%; height: 88%; border-radius: 50%; overflow: hidden; background: #D7DADF; box-shadow: 0 2px 8px rgba(31, 36, 46, .25), inset 0 0 0 2px rgba(255, 255, 255, .55), inset 0 0 0 3px rgba(0, 0, 0, .10); }
+.disc img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.rainbow { position: absolute; inset: 0; border-radius: 50%; mix-blend-mode: screen;
+  background: conic-gradient(from 20deg, transparent 0 8%, rgba(255, 170, 120, .22) 14%, transparent 20% 30%, rgba(120, 200, 255, .22) 38%, transparent 44% 55%, rgba(200, 140, 255, .2) 62%, transparent 68% 78%, rgba(160, 255, 190, .2) 86%, transparent 92%); }
+.hub { position: absolute; left: 33%; top: 33%; width: 34%; height: 34%; border-radius: 50%; background: #E9EBEE; box-shadow: 0 0 0 1px rgba(0, 0, 0, .08);
+  &::after { content: ''; position: absolute; left: 32%; top: 32%; width: 36%; height: 36%; border-radius: 50%; background: #C9CDD2; box-shadow: inset 0 1px 3px rgba(31, 36, 46, .3); } }

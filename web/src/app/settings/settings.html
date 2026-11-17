@@ -1,59 +1,87 @@
-<app-page heading="Settings">
-  <form [formGroup]="form" (ngSubmit)="save()">
-    <label for="user">Soulseek username <span class="req">*</span></label>
-    <input id="user" formControlName="soulseek_username" />
-    <span></span>
+<app-page heading="Settings" [divided]="true">
+  <button back class="btn" type="button" routerLink="/">&lsaquo; Playlists</button>
 
-    <label for="pass">Soulseek password @if (!configured()) {<span class="req">*</span>}</label>
-    <input id="pass" type="password" formControlName="soulseek_password" [placeholder]="configured() ? '(unchanged)' : ''" />
-    <span class="help">Created with this password if the account does not exist yet. Leave blank to keep the current one.</span>
+  <div class="halves">
+    <form class="col" [formGroup]="form" (ngSubmit)="save()">
+      <h2>Soulseek</h2>
+      <div class="grid">
+        <label for="user">Username <span class="req">*</span></label>
+        <div>
+          <input id="user" formControlName="soulseek_username" />
+          <p class="help">The account Mulsa uses to search and download.</p>
+        </div>
 
-    <label for="music">Music folder <span class="req">*</span></label>
-    <div class="control">
-      <input id="music" formControlName="music_dir" />
-      <button type="button" class="btn" (click)="browse('music_dir')">Browse...</button>
-    </div>
-    <span class="help">One subfolder per playlist.</span>
+        <label for="pass">Password @if (!configured()) {<span class="req">*</span>}</label>
+        <div>
+          <input id="pass" type="password" formControlName="soulseek_password" [placeholder]="configured() ? '(unchanged)' : ''" />
+          <p class="help">Leave empty to keep the current password. Created with it if the account does not exist yet.</p>
+        </div>
 
-    <label for="share">Shared folder</label>
-    <div class="control">
-      <input id="share" formControlName="share_dir" />
-      <button type="button" class="btn" (click)="browse('share_dir')">Browse...</button>
-    </div>
-    <span class="help">Optional. Sharing improves your queue position.</span>
+        <label for="port">Port</label>
+        <div>
+          <input id="port" type="number" formControlName="listen_port" class="short" />
+          <p class="help">Listening port. Change it only if the default is blocked.</p>
+        </div>
+      </div>
 
-    <label for="port">Soulseek port</label>
-    <input id="port" type="number" formControlName="listen_port" class="short" />
-    <span class="help">Change only if slskd fails to start.</span>
+      <h2>Folders</h2>
+      <div class="grid">
+        <label for="music">Music folder <span class="req">*</span></label>
+        <div>
+          <div class="control">
+            <input id="music" formControlName="music_dir" />
+            <button type="button" class="btn" (click)="browse('music_dir')">Browse…</button>
+          </div>
+          <p class="help">Finished songs are saved here, one folder per playlist.</p>
+        </div>
 
-    <!-- Token personal de Discogs, sin uso: Mulsa va con las claves de la app (60 peticiones/min compartidas).
-    <label for="discogs">Discogs token</label>
-    <input id="discogs" formControlName="discogs_token" />
-    <span class="help">Optional. Your personal token from discogs.com/settings/developers.</span>
-    -->
+        <label for="share">Shared folder</label>
+        <div>
+          <div class="control">
+            <input id="share" formControlName="share_dir" placeholder="Not shared" />
+            <button type="button" class="btn" (click)="browse('share_dir')">Browse…</button>
+          </div>
+          <p class="help">Folder other Soulseek users can browse. Optional, but sharing improves your queue position.</p>
+        </div>
+      </div>
 
-    <label>Google account</label>
-    <div class="control">
-      @if (google()) {
-        <span>Connected</span>
-        <button type="button" class="btn" (click)="googleLogout()">Sign out</button>
-      } @else {
-        <button type="button" class="btn" (click)="googleLogin()">Sign in with Google</button>
-      }
-    </div>
-    <span class="help">Opens your browser. Mulsa only sees the sheets you pick or create.</span>
+      <h2>Google</h2>
+      <div class="grid">
+        <label>Account</label>
+        <div>
+          <div class="control account">
+            @if (google()) {
+              <span class="connected">Connected</span>
+              <button type="button" class="btn" (click)="googleLogout()">Sign out</button>
+            } @else {
+              <button type="button" class="btn" (click)="googleLogin()">Sign in with Google</button>
+            }
+          </div>
+          <p class="help">Needed to read and create playlist sheets in your Drive.</p>
+          <button type="button" class="text-btn" (click)="advanced.set(!advanced())">{{ advanced() ? 'Hide advanced' : 'Advanced' }}</button>
+        </div>
 
-    <label for="creds">credentials.json</label>
-    <div class="control">
-      <input id="creds" formControlName="credentials_file" />
-      <button type="button" class="btn" (click)="browse('credentials_file')">Browse...</button>
-    </div>
-    <span class="help">Advanced: Google service account, for sheets shared with it.</span>
+        @if (advanced()) {
+          <label for="creds">credentials.json</label>
+          <div>
+            <div class="control">
+              <input id="creds" formControlName="credentials_file" />
+              <button type="button" class="btn" (click)="browse('credentials_file')">Browse…</button>
+            </div>
+            <p class="help">Google service account key. Only needed instead of signing in, with the sheets shared to it.</p>
+          </div>
+        }
+      </div>
 
-    <div class="buttons">
-      <button class="btn btn-primary" type="submit" [disabled]="saving()">Save</button>
-      <button class="btn" type="button" routerLink="/">Cancel</button>
-    </div>
-  </form>
-  <p footer class="status">{{ status() }}</p>
+      <div class="actions">
+        <button class="btn" type="button" routerLink="/">Cancel</button>
+        <button class="btn btn-primary" type="submit" [disabled]="saving()">Save</button>
+      </div>
+    </form>
+
+    <!-- el canguro: web/public/kangaroo.png (PNG con fondo transparente); si no existe, no se ve nada -->
+    <div class="mascot"><img src="kangaroo.png" alt="" (error)="mascot.set(false)" [class.hidden]="!mascot()" /></div>
+  </div>
+
+  <p footer class="status" [class.error]="error()">{{ status() }}</p>
 </app-page>

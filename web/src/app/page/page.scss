@@ -2,5 +2,8 @@
 .top { display: flex; justify-content: space-between; align-items: center; padding: 24px 48px 16px; }
 h1 { margin: 0; font-size: 30px; font-weight: 600; line-height: 36px; color: #1F242E; }
 .content { flex: 1; min-height: 0; overflow-y: auto; padding: 0 48px 24px; display: flex; flex-direction: column; }
-.bottom { display: flex; justify-content: space-between; align-items: center; height: 59px; padding: 0 48px; border-top: 1px solid #DBE0E6; }
+.content.shade { background: #F1F2F4; border-top: 1px solid #DBE0E6; }
+.content.divided { border-top: 1px solid #DBE0E6; }
+.lead { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.bottom { display: flex; justify-content: space-between; align-items: center; height: 40px; padding: 0 48px; border-top: 1px solid #DBE0E6; }
 .actions { display: flex; gap: 8px; }
