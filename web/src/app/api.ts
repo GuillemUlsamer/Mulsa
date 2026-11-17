@@ -66,6 +66,21 @@ export class Api {
     googleStatus(){ 
         return this.http.get<{connected: boolean}>(`${this.base}/auth/google`); 
     }
+    volumes(name: string) {
+        return this.http.get<string[]>(`${this.base}/playlists/${encodeURIComponent(name)}/volumes`);
+    }
+    newPlaylist(name: string, volumes: number) {
+        return this.http.post<{name: string}>(`${this.base}/playlists/new`, { name, volumes });
+    }
+    setupPlaylist(name: string, volumes: number) {
+        return this.http.post(`${this.base}/playlists/${encodeURIComponent(name)}/setup`, { volumes });
+    }
+    importList(name: string, list_id: string) {
+        return this.http.post(`${this.base}/playlists/${encodeURIComponent(name)}/import-list`, { list_id });
+    }
+    importRelease(name: string, volume: string, release_id: string) {
+        return this.http.post(`${this.base}/playlists/${encodeURIComponent(name)}/import-release`, { volume, release_id });
+    }
     openPicker(origin: string) {
         return this.http.post(`${this.base}/picker/open`, { origin });
     }

@@ -278,6 +278,11 @@ def _background(fn, done_msg):
     threading.Thread(target=work, daemon=True).start()
     return {"status": "started"}
 
+@api.get("/playlists/{name}/volumes")
+def playlist_volumes(name: str):
+    spreadsheet = _open_playlist(name)
+    return [ws.title for ws in spreadsheet.worksheets() if ws.title != sheets.RELEASES_SHEET]
+
 @api.post("/playlists/new")
 def new_playlist(body: dict):
     name = body.get("name", "").strip()

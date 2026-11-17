@@ -1,0 +1,42 @@
+<app-page [heading]="name() ?? 'New playlist'">
+  <button actions class="btn" routerLink="/">&lt; Playlists</button>
+  @if (name()) {
+    <button actions class="btn" [routerLink]="['/run', name()]">Run</button>
+  }
+
+  <div class="grid">
+    @if (!name()) {
+      <label for="pname">Name <span class="req">*</span></label>
+      <div class="control">
+        <input id="pname" [(ngModel)]="newName" [disabled]="busy()" />
+        <button type="button" class="btn btn-primary" (click)="create()" [disabled]="busy()">Create</button>
+      </div>
+      <span class="help">Created in your Drive folder, with a Releases sheet and one volume. Then import a list or set up volumes.</span>
+    } @else {
+      <label for="list">Discogs list</label>
+      <div class="control">
+        <input id="list" [(ngModel)]="listId" placeholder="List ID" [disabled]="busy()" />
+        <button type="button" class="btn btn-primary" (click)="importList()" [disabled]="busy()">Import list</button>
+      </div>
+      <span class="help">One volume per release in the list. Replaces the current volumes.</span>
+
+      <label for="vols">Volumes</label>
+      <div class="control">
+        <input id="vols" type="number" min="1" class="short" [(ngModel)]="volumeCount" [disabled]="busy()" />
+        <button type="button" class="btn" (click)="setup()" [disabled]="busy()">Set up</button>
+      </div>
+      <span class="help">Creates empty volumes V 1..N with headers; then import a release into each.</span>
+
+      @for (v of volumes(); track v) {
+        <label>{{ v }}</label>
+        <div class="control">
+          <input [(ngModel)]="releaseIds[v]" placeholder="Release ID" [disabled]="busy()" />
+          <button type="button" class="btn" (click)="importRelease(v)" [disabled]="busy()">Import</button>
+        </div>
+        <span></span>
+      }
+    }
+  </div>
+
+  <p footer class="status">{{ status() }}</p>
+</app-page>

@@ -25,6 +25,8 @@ export class Runner implements OnInit, OnDestroy {
   name = input.required<string>();
   private inReview = false;
   private list = viewChild<ElementRef<HTMLElement>>('list');
+  // las xlsx no tienen setup: esa pagina solo trabaja con hojas de Google
+  isGoogle = () => this.api.playlistsCache().find(p => p.name === this.name())?.source !== 'xlsx';
 
   constructor() {
     effect(() => {
