@@ -1,12 +1,19 @@
-<app-page heading="Mulsa" [shade]="true">
-  <button actions class="btn" routerLink="/setup">New playlist</button>
-  <button actions class="btn" (click)="addFromGoogle()">Add from Google</button>
-  <button actions class="btn" (click)="importXlsx()">Import xlsx</button>
-  <button actions class="btn" routerLink="/settings">Settings</button>
+<app-page heading="Mulsa" [shade]="true" [logo]="true">
+  <button actions class="btn" (click)="api.go(['/setup'])">New playlist</button>
+  <div actions class="item" [class.open]="fileOpen()" (click)="$event.stopPropagation()">
+    <button class="btn" (click)="fileOpen.set(!fileOpen())">Add playlist &#9662;</button>
+    @if (fileOpen()) {
+      <div class="dropdown">
+        <button class="di" (click)="fileOpen.set(false); addFromGoogle()">From Google Drive…</button>
+        <button class="di" (click)="fileOpen.set(false); importXlsx()">From xlsx file…</button>
+      </div>
+    }
+  </div>
+  <button actions class="btn" (click)="api.go(['/settings'])">Settings</button>
 
   <app-shelf [playlists]="playlists()" (select)="selected.set($event)" />
   @if (selected(); as sel) {
-    <app-record [playlists]="playlists()" [start]="playlists().indexOf(sel.p)" [originEl]="sel.el"
+    <app-record [playlists]="playlists()" [start]="indexOf(sel.p.name)" [originEl]="sel.el" [reverse]="reverse()"
       (close)="selected.set(null)" (open)="open($event)" (setup)="setup($event)" />
   }
 

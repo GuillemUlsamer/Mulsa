@@ -17,6 +17,8 @@ export class SelectedRecord {
   playlists = input.required<Playlist[]>();
   start = input.required<number>();
   originEl = input<HTMLElement | null>(null);
+  // true al volver del runner: la caja empieza abierta con la bisagra en el centro y se cierra
+  reverse = input(false);
   close = output<void>();
   open = output<Playlist>();
   setup = output<Playlist>();
@@ -43,7 +45,7 @@ export class SelectedRecord {
       const p = this.playlist();
       untracked(() => this.load(p));
     });
-    afterNextRender(() => this.animateOpen());
+    afterNextRender(() => this.reverse() ? this.animateReverse() : this.animateOpen());
   }
 
   private load(p: Playlist | undefined) {
@@ -111,6 +113,29 @@ export class SelectedRecord {
     // tapa abierta a los ~1100 ms; luego fundido a blanco y el runner entra con su propio fade
     setTimeout(() => this.host.nativeElement.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 350, fill: 'forwards' }), 2000);
     setTimeout(() => this.open.emit(p), 2050);
+  }
+
+  private animateReverse() {
+    const stage = this.stage().nativeElement;
+    const big = this.big().nativeElement;
+    const rect = stage.getBoundingClientRect();
+    const dx = window.innerWidth / 2 - rect.left;
+    const dy = window.innerHeight / 2 - (rect.top + rect.height / 2);
+    // estado inicial: abierta y centrada en la bisagra, sin transiciones
+    big.classList.add('no-anim', 'is-opening');
+    stage.style.transform = `translate(${dx}px, ${dy}px)`;
+    this.panel().nativeElement.style.opacity = '0';
+    this.scrim().nativeElement.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 250, easing: 'linear' });
+    // en el siguiente frame se quita el estado abierto y las transiciones de CSS cierran la tapa
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      big.classList.remove('no-anim');
+      big.classList.remove('is-opening');
+      stage.style.transform = '';
+      stage.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }],
+        { duration: 1000, delay: 300, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'backwards' });
+      this.panel().nativeElement.animate([{ opacity: 0, transform: 'translateX(12px)' }, { opacity: 1, transform: 'none' }],
+        { duration: 250, delay: 1200, easing: EASE, fill: 'forwards' });
+    }));
   }
 
   doClose() {

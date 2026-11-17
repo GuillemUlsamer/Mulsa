@@ -1,5 +1,6 @@
 import { Injectable, inject, Service, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 
 export interface Playlist { 
@@ -47,6 +48,15 @@ export interface LogEvent {
 @Injectable({ providedIn: 'root' })
 export class Api {
     private http = inject(HttpClient);
+    private router = inject(Router);
+
+    // navega tras fundir la pantalla actual (la siguiente entra con su propio fundido, ver Page)
+    go(commands: any[], state?: object) {
+        const page = document.querySelector('app-page');
+        const nav = () => this.router.navigate(commands, state ? { state } : undefined);
+        const anim = page?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: 'linear', fill: 'forwards' });
+        if (anim) anim.onfinish = nav; else nav();
+    }
     private base = '/api';
     playlistsCache = signal<Playlist[]>([]);
     // true: la lista cambio (run, setup...); Playlists la recarga por detras sin vaciarla

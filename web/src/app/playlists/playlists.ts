@@ -1,5 +1,5 @@
-import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Component, HostListener, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Api, Playlist } from '../api';
 import { Page } from '../page/page';
@@ -7,19 +7,28 @@ import { Shelf } from '../shelf/shelf';
 import { SelectedRecord } from '../record/record';
 
 @Component({
-  imports: [RouterLink, Page, Shelf, SelectedRecord],
+  imports: [Page, Shelf, SelectedRecord],
   selector: 'app-playlists',
   styleUrl: './playlists.scss',
   templateUrl: './playlists.html',
 })
 
 export class Playlists implements OnInit, OnDestroy {
-  private api = inject(Api);
+  api = inject(Api);
   private router = inject(Router);
   playlists = this.api.playlistsCache;
   loading = signal(false);
   private sub?: Subscription;
   selected = signal<{ p: Playlist; el: HTMLElement | null } | null>(null);
+  // true cuando volvemos del runner: el disco sale abierto y se cierra
+  reverse = signal(false);
+  fileOpen = signal(false);
+
+  // un clic fuera del menu lo cierra
+  @HostListener('document:click')
+  closeMenu() {
+    this.fileOpen.set(false);
+  }
 
   ngOnInit() { 
     if (this.playlists().length === 0 || this.api.playlistsStale()) this.load();
@@ -27,7 +36,7 @@ export class Playlists implements OnInit, OnDestroy {
     const back = history.state?.selected as string | undefined;
     if (back) {
       const p = this.playlists().find(x => x.name === back);
-      if (p) this.selected.set({ p, el: null });
+      if (p) { this.reverse.set(!!history.state?.closing); this.selected.set({ p, el: null }); }
     }
   }
 
@@ -65,12 +74,17 @@ export class Playlists implements OnInit, OnDestroy {
     this.api.importXlsx().subscribe(r => { if (r.name) this.load(); });
   }
 
+  // por nombre: la lista se recarga por detras y los objetos cambian
+  indexOf(name: string) {
+    return Math.max(0, this.playlists().findIndex(p => p.name === name));
+  }
+
   open(p: Playlist) {
     this.router.navigate(['/run', p.name], { state: { opened: true } });
   }
 
   setup(p: Playlist) {
-    this.router.navigate(['/setup', p.name]);
+    this.api.go(['/setup', p.name]);
   }
   
   // El selector se abre en el navegador del sistema; nos enteramos de que ha acabado por el log.

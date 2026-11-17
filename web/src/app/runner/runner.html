@@ -1,7 +1,7 @@
 <app-page [heading]="name()" [divided]="true">
   <button back class="btn" (click)="back()">&lsaquo; Playlists</button>
   @if (runState() !== 'running' && isGoogle()) {
-    <button actions class="btn" [routerLink]="['/setup', name()]">Setup</button>
+    <button actions class="btn" (click)="api.go(['/setup', name()])">Setup</button>
   }
   @if (runState() !== 'running') {
     <button actions class="btn" (click)="remove()">Delete</button>
