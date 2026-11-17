@@ -36,6 +36,7 @@ CACHE_DIR = APP_DIR / 'cache'
 
 CONFIG_FILE = APP_DIR / 'config.json'
 CREDENTIALS_FILE = APP_DIR / 'credentials.json'
+GOOGLE_TOKEN_FILE = APP_DIR / 'google_token.json'
 
 # Carpeta de musica: la elige el usuario en la pantalla 0; esto es solo el valor por defecto.
 DEFAULT_MUSIC_DIR = Path.home() / 'Music' / 'Mulsa'
@@ -158,8 +159,8 @@ def run_setup(username, password, music_dir, share_dir=None, credentials_file=No
     if credentials_file and Path(credentials_file) != CREDENTIALS_FILE:
         progress("Copying credentials.json...")
         shutil.copyfile(credentials_file, CREDENTIALS_FILE)
-    if not CREDENTIALS_FILE.exists():
-        raise RuntimeError("credentials.json is missing (Google service account).")
+    if not CREDENTIALS_FILE.exists() and not GOOGLE_TOKEN_FILE.exists():
+        raise RuntimeError("Sign in with Google or select a credentials.json (service account).")
 
     download_slskd(progress)
 

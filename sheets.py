@@ -17,6 +17,7 @@ import requests
 
 import bootstrap
 import log
+import gauth
 from stop import check_stop
 from tagging import sanitize_filename, clean_artist, clean_title, tag_file
 from downloader import download_track
@@ -129,6 +130,9 @@ def list_xlsx_playlists():
     return result
 
 def setup_gspread():
+    creds = gauth.load_credentials()
+    if creds:
+        return gspread.authorize(creds)
     if not CREDENTIALS_FILE.exists():
         print(f"Error: {CREDENTIALS_FILE} not found.")
         return None

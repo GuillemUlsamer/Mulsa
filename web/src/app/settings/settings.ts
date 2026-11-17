@@ -1,4 +1,5 @@
-import { Component, inject, signal, OnInit} from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { Router, RouterLink} from '@angular/router';
 import { Api } from '../api';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
@@ -10,7 +11,7 @@ import { Page } from '../page/page';
   styleUrl: './settings.scss',
   templateUrl: './settings.html',
 })
-export class Settings implements OnInit {
+export class Settings implements OnInit, OnDestroy {
   private api = inject(Api);
   private router = inject(Router);
   private fb = inject(FormBuilder);
@@ -26,9 +27,38 @@ export class Settings implements OnInit {
 
   status = signal('');
   saving = signal(false);
+  google = signal(false);
+  configured = signal(false);
+  private sub?: Subscription;
 
   ngOnInit() {
-    this.api.settings().subscribe(s => this.form.patchValue(s));
+    this.api.settings().subscribe(s => { this.form.patchValue(s); this.configured.set(s.configured); });
+    this.refreshGoogle();
+  }
+
+  ngOnDestroy() {
+    this.sub?.unsubscribe();
+  }
+
+  refreshGoogle() {
+    this.api.googleStatus().subscribe(s => this.google.set(s.connected));
+  }
+
+  // El login acaba en el navegador, fuera de la app: nos enteramos por el evento de log.
+  googleLogin() {
+    this.status.set('Waiting for the browser...');
+    this.api.googleLogin().subscribe();
+    this.sub?.unsubscribe();
+    this.sub = this.api.events().subscribe(e => {
+      if (e.kind !== 'line' || !e.text.startsWith('Google')) return;
+      this.status.set(e.text);
+      this.refreshGoogle();
+      this.sub?.unsubscribe();
+    });
+  }
+
+  googleLogout() {
+    this.api.googleLogout().subscribe(() => { this.google.set(false); this.status.set(''); });
   }
 
   save() {

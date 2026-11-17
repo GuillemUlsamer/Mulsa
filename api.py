@@ -10,6 +10,7 @@ from pathlib import Path
 
 import bootstrap
 import log
+import gauth
 import manager
 import sheets
 import webview
@@ -132,6 +133,26 @@ def get_settings():
         "credentials_file": credentials_file
     }
 
+@api.get("/auth/google")
+def google_status():
+    return {"connected": gauth.load_credentials() is not None}
+
+@api.post("/auth/google")
+def google_login():
+    def work():
+        try:
+            gauth.login()
+            log.line("Google account connected.", "done")
+        except Exception as e:
+            log.line(f"Google login failed: {e}", "error")
+    threading.Thread(target=work, daemon=True).start()
+    return {"status": "started"}
+
+@api.delete("/auth/google")
+def google_logout():
+    gauth.logout()
+    return {"status": "ok"}
+
 # post de los settings
 @api.post("/settings")
 def save_settings(body: dict):
@@ -143,7 +164,8 @@ def save_settings(body: dict):
     port = str(body.get("listen_port", bootstrap.LISTEN_PORT)).strip()
     creds = body.get("credentials_file", str(bootstrap.CREDENTIALS_FILE)).strip()
 
-    # valido los datos
+    if not pwd:
+        pwd = bootstrap.read_soulseek_password() or ""
     if not user or not pwd:
         raise HTTPException(400, "Soulseek username and password are required.")
     if not music:
@@ -154,9 +176,6 @@ def save_settings(body: dict):
             raise ValueError()
     except ValueError:
         raise HTTPException(400, "The listen port must be a number between 1 and 65535")
-    if not creds:
-        raise HTTPException(400, "Select your Google credentials.json file.")
-
     def work():
         try: 
             bootstrap.run_setup(
@@ -164,7 +183,7 @@ def save_settings(body: dict):
                 password=pwd,
                 music_dir=music,
                 share_dir=share,
-                credentials_file=creds,
+                credentials_file=creds or None,
                 progress=log.line,
                 listen_port=port_num,
             )

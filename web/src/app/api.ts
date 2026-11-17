@@ -62,6 +62,15 @@ export class Api {
     importXlsx(){ 
         return this.http.post<{name: string | null}>(`${this.base}/playlists/import`, {});
     }
+    googleStatus(){ 
+        return this.http.get<{connected: boolean}>(`${this.base}/auth/google`); 
+    }
+    googleLogin(){ 
+        return this.http.post(`${this.base}/auth/google`, {}); 
+    }
+    googleLogout(){ 
+        return this.http.delete(`${this.base}/auth/google`); 
+    }
     events(): Observable<LogEvent> {
         return new Observable(subscriber => {
             const source = new EventSource(`${this.base}/events`);
