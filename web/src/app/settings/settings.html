@@ -1,5 +1,5 @@
 <app-page heading="Settings" [divided]="true">
-  <button back class="btn" type="button" routerLink="/">&lsaquo; Playlists</button>
+  <button back class="btn" type="button" (click)="api.go(['/'])">&lsaquo; Playlists</button>
 
   <div class="halves">
     <form class="col" [formGroup]="form" (ngSubmit)="save()">
@@ -74,7 +74,7 @@
       </div>
 
       <div class="actions">
-        <button class="btn" type="button" routerLink="/">Cancel</button>
+        <button class="btn" type="button" (click)="api.go(['/'])">Cancel</button>
         <button class="btn btn-primary" type="submit" [disabled]="saving()">Save</button>
       </div>
     </form>

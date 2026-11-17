@@ -1,5 +1,4 @@
 import { Component, OnInit, OnDestroy, computed, inject, input, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { Api, PlaylistInfo } from '../api';
@@ -15,14 +14,13 @@ interface ImportRow {
 // Lo que hacia el menu music_manager del Apps Script: crear la hoja, importar una lista de
 // Discogs, o preparar N volumenes e importar un release en cada uno.
 @Component({
-  imports: [RouterLink, FormsModule, Page],
+  imports: [FormsModule, Page],
   selector: 'app-setup',
   styleUrl: './setup.scss',
   templateUrl: './setup.html',
 })
 export class Setup implements OnInit, OnDestroy {
-  private api = inject(Api);
-  private router = inject(Router);
+  api = inject(Api);
   private sub?: Subscription;
 
   // sin name: pantalla de crear; con name: setup de una playlist de Google existente
@@ -80,7 +78,7 @@ export class Setup implements OnInit, OnDestroy {
     this.error.set(false);
     this.status.set('Creating...');
     this.api.newPlaylist(name, 1).subscribe({
-      next: () => { this.api.playlistsStale.set(true); this.router.navigate(['/setup', name]); },
+      next: () => { this.api.playlistsStale.set(true); this.api.go(['/setup', name]); },
       error: e => this.fail(e),
     });
   }

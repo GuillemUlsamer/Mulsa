@@ -265,18 +265,38 @@ def _releases_sheet(spreadsheet):
     ]})
     return ws
 
+# Cada peticion a Google tarda; aqui se agrupan: una para crear las pestanas que falten, una
+# para todas las celdas y una para todo el formato. Crear una playlist baja de ~12 a ~5.
 def setup_sheet(spreadsheet, vol_num):
-    _releases_sheet(spreadsheet)
-    requests = []
-    for i in range(1, vol_num + 1):
-        title = f'V {i}'
-        try:
-            ws = spreadsheet.worksheet(title)
-        except gspread.WorksheetNotFound:
-            ws = spreadsheet.add_worksheet(title, rows=200, cols=26)
-        ws.batch_clear(['A:G'])
-        ws.update(values=[VOLUME_HEADERS], range_name='A1:G1')
-        ws.update(values=[['Album', 'Year', 'CoverURL']], range_name='I1:K1')
+    titles = [f'V {i}' for i in range(1, vol_num + 1)]
+    existing = {ws.title: ws for ws in spreadsheet.worksheets()}
+    missing = [RELEASES_SHEET] if RELEASES_SHEET not in existing else []
+    missing += [t for t in titles if t not in existing]
+    if missing:
+        def props(t):
+            p = {'title': t, 'gridProperties': {'rowCount': 100 if t == RELEASES_SHEET else 200, 'columnCount': 26}}
+            if t == RELEASES_SHEET:
+                p['index'] = 0
+            return p
+        spreadsheet.batch_update({'requests': [{'addSheet': {'properties': props(t)}} for t in missing]})
+        existing = {ws.title: ws for ws in spreadsheet.worksheets()}
+    releases = existing[RELEASES_SHEET]
+
+    # celdas: cabeceras de Releases y de cada volumen (A:G se limpia con un rango vacio)
+    data = [{'range': f"'{RELEASES_SHEET}'!A1:C1", 'values': [['NAME OF THE ALBUM', 'YEAR', 'COVER']]}]
+    clear = []
+    for t in titles:
+        clear.append(f"'{t}'!A:G")
+        data.append({'range': f"'{t}'!A1:G1", 'values': [VOLUME_HEADERS]})
+        data.append({'range': f"'{t}'!I1:K1", 'values': [['Album', 'Year', 'CoverURL']]})
+    spreadsheet.values_batch_clear(body={'ranges': clear})
+    spreadsheet.values_batch_update({'valueInputOption': 'RAW', 'data': data})
+
+    # formato
+    requests = [_col_width(releases, 0, 320), _col_width(releases, 1, 100), _col_width(releases, 2, 220),
+                {'updateSheetProperties': {'properties': {'sheetId': releases.id, 'index': 0}, 'fields': 'index'}}]
+    for t in titles:
+        ws = existing[t]
         requests += [_col_width(ws, c, w) for c, w in enumerate(VOLUME_WIDTHS)]
         # quitar casillas y formato de un setup anterior
         requests.append({'setDataValidation': {'range': _grid(ws, 1, None, 0, 7)}})
@@ -286,8 +306,8 @@ def setup_sheet(spreadsheet, vol_num):
             'range': {'sheetId': ws.id, 'dimension': 'COLUMNS', 'startIndex': 7, 'endIndex': 11},
             'properties': {'hiddenByUser': True}, 'fields': 'hiddenByUser'}})
     # la pestana vacia que Google crea por defecto sobra
-    for ws in spreadsheet.worksheets():
-        if ws.title in ('Sheet1', 'Hoja 1') and len(spreadsheet.worksheets()) > 1:
+    for title, ws in existing.items():
+        if title in ('Sheet1', 'Hoja 1') and len(existing) > 1:
             requests.append({'deleteSheet': {'sheetId': ws.id}})
     spreadsheet.batch_update({'requests': requests})
 

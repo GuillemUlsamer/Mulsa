@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, ElementRef, afterNextRender, computed, effect, inject, input, signal, viewChild } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Api, LogEvent, PlaylistInfo, Track } from '../api';
 import { Page } from '../page/page';
@@ -21,7 +21,7 @@ type RunState = 'idle' | 'running' | 'finished';
 // Dentro del disco (pantalla 3): a la izquierda el libreto con los temas del volumen elegido,
 // a la derecha el disco en su bandeja y, al ejecutar, el log en vivo.
 @Component({
-  imports: [RouterLink, Page],
+  imports: [Page],
   selector: 'app-runner',
   styleUrl: './runner.scss',
   templateUrl: './runner.html',
@@ -164,12 +164,9 @@ export class Runner implements OnInit, OnDestroy {
     this.api.log().subscribe(log => navigator.clipboard.writeText(log));
   }
 
-  // fundido de la pagina y vuelta a la estanteria con este disco seleccionado
+  // vuelta a la estanteria: fundido y el disco aparece abierto y se cierra (closing)
   back() {
-    const page = document.querySelector('app-page');
-    const anim = page?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250, easing: 'linear', fill: 'forwards' });
-    const go = () => this.router.navigate(['/'], { state: { selected: this.name() } });
-    if (anim) anim.onfinish = go; else go();
+    this.api.go(['/'], { selected: this.name(), closing: true });
   }
 
   remove() {

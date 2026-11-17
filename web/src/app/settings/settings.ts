@@ -1,19 +1,17 @@
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { Router, RouterLink} from '@angular/router';
 import { Api } from '../api';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Page } from '../page/page';
 
 @Component({
-  imports: [ReactiveFormsModule, RouterLink, Page],
+  imports: [ReactiveFormsModule, Page],
   selector: 'app-settings',
   styleUrl: './settings.scss',
   templateUrl: './settings.html',
 })
 export class Settings implements OnInit, OnDestroy {
-  private api = inject(Api);
-  private router = inject(Router);
+  api = inject(Api);
   private fb = inject(FormBuilder);
 
   form = this.fb.nonNullable.group({
@@ -70,7 +68,7 @@ export class Settings implements OnInit, OnDestroy {
     this.error.set(false);
     this.status.set('Setting up...');
     this.api.saveSettings(this.form.getRawValue()).subscribe({
-      next: () => this.router.navigateByUrl('/'),
+      next: () => this.api.go(['/']),
       error: e => { 
         this.saving.set(false); 
         this.error.set(true);

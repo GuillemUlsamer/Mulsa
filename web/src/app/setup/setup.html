@@ -1,9 +1,5 @@
 <app-page [heading]="name() ?? 'New playlist'" [divided]="true">
-  <button back class="btn" type="button" routerLink="/">&lsaquo; Playlists</button>
-  @if (name()) {
-    <button actions class="btn" (click)="openInDrive()" [disabled]="!sheetUrl()">Open in Drive</button>
-    <button actions class="btn btn-primary" [routerLink]="['/run', name()]">Run</button>
-  }
+  <button back class="btn" type="button" (click)="api.go(['/'])">&lsaquo; Playlists</button>
 
   @if (!name()) {
     <!-- modo A: crear -->
@@ -83,9 +79,12 @@
         </div>
       </div>
       <div class="paper volumes">
-        <div class="head">
-          <div class="title">Volumes</div>
-          <div class="sub">{{ volumes().length }} volumes · {{ totalTracks() }} tracks</div>
+        <div class="head split">
+          <div>
+            <div class="title">Volumes</div>
+            <div class="sub">{{ volumes().length }} volumes · {{ totalTracks() }} tracks</div>
+          </div>
+          <button type="button" class="btn" (click)="openInDrive()" [disabled]="!sheetUrl()">Open in Drive</button>
         </div>
         <div class="rows">
           @for (v of volumes(); track v.title) {
