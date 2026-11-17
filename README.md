@@ -13,10 +13,10 @@ It includes a Google Apps Script (playlistHelper.gs) to import tracklists from D
 - Convert to MP3
 - Add metadata: artist, title, album (compilation + volume), year, track number and cover art
 - Flag songs worth checking (verify) when the duration looks off or the match came from a search without artist
-- Import playlists from Discogs
-- Import Discogs lists (multi-release) and create volumes automatically
-- Keep a Releases catalog sheet with album, year and cover
-- Desktop app with playlist cards from your Drive, per-song progress, stop button and a summary of what got downloaded
+- Create playlists in your Google Drive from the app: import a Discogs release or a whole Discogs list (one volume per release), with a Releases catalog sheet (album, year and cover)
+- Import playlists from an xlsx file
+- Desktop app with playlist cards, per-song progress, stop button and a summary of what got downloaded
+- Sign in with Google: Mulsa only sees the sheets you pick or creates
 
 ## Tech Stack
 - Python (FastAPI, uvicorn, pywebview, gspread, mutagen)
@@ -28,36 +28,26 @@ It includes a Google Apps Script (playlistHelper.gs) to import tracklists from D
 
 ## Prerequisites
 1.  **Soulseek account**: username and password. If the user does not exist, it is created with that password the first time it connects.
-2. **Google service account**:
-    * Enable the Google Sheets and Google Drive APIs in Google Cloud Console.
-    * Create a service account and download its JSON key.
-    * Save the file as credentials.json anywhere you like; the app asks for its location on first run.
-    * **Important**: share your spreadsheet with the service account email (client_email in the JSON) as an editor.
+2.  **Google account**, to keep the playlists in Google Sheets. You sign in from the app.
 
 ## Installation
-1.  Download 'MulsaSetup-x.x.x.exe' from the [Releases](https://github.com/GuillemUlsamer/mulsa/releases) page and run it. It creates a desktop shortcut.
+1.  Download `MulsaSetup-x.x.x.exe` from the [Releases](https://github.com/GuillemUlsamer/Mulsa/releases) page and run it. It creates a desktop shortcut.
 2.  Open Mulsa. The first time, the settings screen shows up:
     *   Soulseek username and password.
     *   Music folder: where playlists are saved (one subfolder per playlist).
     *   Shared folder (optional): what you offer to the Soulseek network. Sharing something makes more users serve you.
-    *   Google `credentials.json`.
     *   Soulseek port (leave 50300 if you don't know what it is).
+    *   **Sign in with Google**: opens your browser; accept and come back. Mulsa asks only for access to the files you pick or it creates.
 
     Fields marked with `*` are required.
 3.  Press **Save**. It downloads slskd (the Soulseek client) and configures it; it takes about a minute. Everything lives in `%LOCALAPPDATA%\Mulsa`, outside the music folder.
 
 To update, install the new version on top; settings are kept.
 
-## Spreadsheet Setup
-You can set up the sheet by hand or with the included helper.
+Advanced: instead of signing in you can use a Google service account (`credentials.json`) with the sheets shared to it. That is how older versions worked and it still does.
 
-### Automatic Method (Recommended)
-Use the `playlistHelper.gs` script to set up the sheets quickly:
-1.  Install the script following the steps in the **Discogs Helper** section (below).
-2.  Reload the Google Sheets page.
-3.  In the `music_manager` menu at the top, select **Set up**.
-4.  Enter the number of volumes (sheets) you want to create.
-5.  The script generates the sheets with the right headers and column widths.
+## Spreadsheet Setup
+Mulsa creates and fills the sheets for you (see **Usage**). This section is for sheets made by hand, and for the optional Apps Script helper that lets you import from Discogs inside Google Sheets, for example from your phone.
 
 ### Column Layout (Manual)
 If you prefer to do it by hand, the spreadsheet must have the following columns (starting at column A):
@@ -73,8 +63,8 @@ If you prefer to do it by hand, the spreadsheet must have the following columns 
 | G | Status | Written by the app |
 | H | Notes | (Optional) |
 
-### Discogs Helper
-To make importing music easier:
+### Discogs Helper (optional)
+Same as the app's setup and imports, but as a menu inside Google Sheets, usable from your phone. Needs your own Discogs token (discogs.com/settings/developers) in the script:
 1.  Open your spreadsheet in Google Sheets.
 2.  Go to Extensions > Apps Script.
 3.  Add the library: 1efgoS3Xk_cBVN14eYvrbJngBN8EuUARaOQsqbWSH-eFU6SWdwZR4Tv9N
@@ -111,13 +101,14 @@ Besides importing by Release ID, the menu also includes:
 - **Releases** sheet: keeps a catalog of imported albums (name, year and cover).
 
 ## Usage
-Open Mulsa from the shortcut. Your playlists show up as cards with cover and year. To add them:
-- **Add from Google** opens a Google Drive picker in your browser. Pick the sheets you want (several at once with Shift); Mulsa only sees the sheets you pick there or creates itself, so a sheet you make by hand in Drive has to be picked once. Picking a folder saves it as the place where Mulsa creates new playlists.
+Open Mulsa from the shortcut. Your playlists show up as cards with cover and year. Ways to get them there:
+- **New playlist** creates a Google Sheet in your Drive (in the folder you picked with Add from Google, or the Drive root) and opens its setup page. There you either **Import list** (a Discogs list ID: one volume per release, filled in) or **Set up** N empty volumes and **Import** a Discogs release ID into each one. **Open in Drive** shows the sheet while it fills. The first time a sheet shows a cover, Google asks you to allow `IMAGE()` to load external URLs: click **Allow access** once.
+- **Add from Google** opens a Google Drive picker in your browser. Pick the sheets you want (several at once with Shift); Mulsa only sees the sheets you pick there or creates itself, so a sheet you make by hand in Drive has to be picked once. Picking a folder saves it as the place where New playlist creates sheets.
 - **Import xlsx** loads a spreadsheet exported from Google Sheets (File > Download > xlsx) with the same column layout. Mulsa keeps a copy and writes the status there.
 
-Pick a playlist and press **Run**: it downloads the ticked songs into a `PLAYLIST NAME` subfolder of your music folder, showing the state of each song (searching, downloading, converting, done or failed).
+Tick the songs you want in the sheet (from any device), then pick the playlist and press **Run**: it downloads the ticked songs into a `PLAYLIST NAME` subfolder of your music folder, showing the state of each song (searching, downloading, converting, done or failed).
 
-**Stop** stops and shuts down slskd. When the run finishes, the list shows the songs worth checking. **Copy log** copies a summary of what got downloaded plus the detailed log to the clipboard, in case you want to look into a failure. **Settings** (on the playlists screen) goes back to the settings screen.
+**Stop** stops and shuts down slskd. When the run finishes, the list shows the songs worth checking. **Copy log** copies a summary of what got downloaded plus the detailed log to the clipboard, in case you want to look into a failure. **Setup** goes back to the playlist's setup page, and **Delete** sends the sheet to the Drive trash (or removes the imported xlsx); downloaded music is kept. **Settings** (on the playlists screen) goes back to the settings screen.
 
 If you untick a song that was already downloaded, the next run deletes it from the folder.
 
@@ -129,28 +120,55 @@ The Status column shows `Downloaded`, `Downloaded (verify)` (check it: odd durat
 ### Soulseek cannot connect 
 If you are on a network that blocks Soulseek traffic (university wifi, company VPN), slskd cannot connect at all: try from another network.
 
-### The window is blank 
-Another program is using port 8765. Close it and open Mulsa again.
-
 ### Setting up the project on another computer
-No need to redo anything in Google Cloud or share the sheet again.
-1. Install from the same installer.
-2. Copy credentials.json from the other machine. If you don’t have it at hand, create a new key in the same service account (Credentials > the account > Keys > Add key > JSON). It does not invalidate the other laptop’s key.
-3. Fill in the settings.
+Install from the same installer, fill in the settings and sign in with Google again. Playlists you picked or created are already authorized for Mulsa, so they show up right away.
+
+## Development
+
+```
+git clone https://github.com/GuillemUlsamer/Mulsa.git
+cd Mulsa
+pip install -r requirements.txt
+cd web && npm ci && cd ..
+```
+
+Google sign-in and Discogs covers need two files that are not in the repo, both under `assets/`: `google_client.json` (an OAuth desktop client from Google Cloud, with the `drive.file` scope) and `discogs_client.json` (`{"key": ..., "secret": ...}` from a Discogs application). Without them the app still runs, without Google and without covers. The release workflow writes them from the `GOOGLE_CLIENT_JSON` and `DISCOGS_CLIENT_JSON` repository secrets.
+
+While developing, two terminals:
+
+```
+python -m uvicorn api:app --reload --port 8765     # backend, restarts when a .py changes
+cd web; ng serve                                   # frontend at http://localhost:4200, reloads on its own
+```
+
+The native file dialogs only work inside the app window: `cd web; ng build; cd ..; python main.py`.
+
+To build the exe and the installer (needs [Inno Setup 6](https://jrsoftware.org/isdl.php)):
+
+```
+cd web; ng build; cd ..
+python -m pip install pyinstaller
+python -m PyInstaller --noconfirm Mulsa.spec
+& "${env:LOCALAPPDATA}\Programs\Inno Setup 6\ISCC.exe" installer.iss
+```
+
+Releases are published by pushing a `vX.Y.Z` tag: GitHub Actions builds the installer and uploads it to Releases.
 
 ## Project Structure
 
 *   `main.py`: Starts the backend and opens the app window.
 *   `api.py`: HTTP API (FastAPI): playlists, runs, settings and live events for the interface.
-*   `web/`: Angular interface (playlists, runner, settings).
+*   `web/`: Angular interface (playlists, runner, setup, settings). `web/public/picker.html` is the Google Drive picker, opened in the system browser.
 *   `manager.py`: Orchestrates a run: starts slskd, reads the sheet, downloads, shuts slskd down.
 *   `bootstrap.py`: First run: downloads slskd and generates its configuration.
-*   `sheets.py`: Reads and writes the Google sheet; splits songs across threads.
+*   `sheets.py`: Playlist sources (Google sheet or imported xlsx), creating and filling sheets, listing playlists; splits songs across threads.
+*   `gauth.py`: Google sign-in (OAuth) and token storage.
+*   `discogs.py`: Discogs API calls.
 *   `downloader.py`: Search strategy (exact, album, loose, title, artist, queued retry, last resort).
 *   `matching.py`: Scores and filters candidates.
 *   `slskd_client.py`: slskd API calls, FLAC to MP3 conversion, user memory.
 *   `tagging.py`: Filename cleanup and ID3 tags.
 *   `log.py`: Event channel between the pipeline and the interface, plus the detailed log.
-*   `playlistHelper.gs`: Script for Google Sheets (Google Apps Script).
+*   `playlistHelper.gs`: Optional Apps Script with the same setup and Discogs imports inside Google Sheets.
 *   `requirements.txt`: Python dependencies.
 *   `Mulsa.spec`, `installer.iss` and `.github/workflows/release.yml`: exe, installer and automatic release.

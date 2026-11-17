@@ -53,7 +53,8 @@ def incomplete_dir(music_dir):
     return Path(music_dir) / '_slskd_incomplete'
 
 def is_configured():
-    return all(p.exists() for p in (CONFIG_FILE, SLSKD_EXE, SLSKD_YML, CREDENTIALS_FILE))
+    google = CREDENTIALS_FILE.exists() or GOOGLE_TOKEN_FILE.exists()
+    return google and all(p.exists() for p in (CONFIG_FILE, SLSKD_EXE, SLSKD_YML))
 
 def load_config():
     with open(CONFIG_FILE, encoding='utf-8') as f:
