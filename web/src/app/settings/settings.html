@@ -26,6 +26,12 @@
     <input id="port" type="number" formControlName="listen_port" class="short" />
     <span class="help">Change only if slskd fails to start.</span>
 
+    <!-- Token personal de Discogs, sin uso: Mulsa va con las claves de la app (60 peticiones/min compartidas).
+    <label for="discogs">Discogs token</label>
+    <input id="discogs" formControlName="discogs_token" />
+    <span class="help">Optional. Your personal token from discogs.com/settings/developers.</span>
+    -->
+
     <label>Google account</label>
     <div class="control">
       @if (google()) {

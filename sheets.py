@@ -210,7 +210,7 @@ def _releases_sheet(spreadsheet):
     try:
         ws = spreadsheet.worksheet(RELEASES_SHEET)
     except gspread.WorksheetNotFound:
-        ws = spreadsheet.add_worksheet(RELEASES_SHEET, rows=100, cols=3, index=0)
+        ws = spreadsheet.add_worksheet(RELEASES_SHEET, rows=100, cols=26, index=0)
     ws.update(values=[['NAME OF THE ALBUM', 'YEAR', 'COVER']], range_name='A1:C1')
     spreadsheet.batch_update({'requests': [
         _col_width(ws, 0, 320), _col_width(ws, 1, 100), _col_width(ws, 2, 220),
@@ -226,7 +226,7 @@ def setup_sheet(spreadsheet, vol_num):
         try:
             ws = spreadsheet.worksheet(title)
         except gspread.WorksheetNotFound:
-            ws = spreadsheet.add_worksheet(title, rows=200, cols=11)
+            ws = spreadsheet.add_worksheet(title, rows=200, cols=26)
         ws.batch_clear(['A:G'])
         ws.update(values=[VOLUME_HEADERS], range_name='A1:G1')
         ws.update(values=[['Album', 'Year', 'CoverURL']], range_name='I1:K1')

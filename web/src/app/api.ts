@@ -15,6 +15,7 @@ export interface Settings {
     music_dir: string;
     share_dir: string;
     listen_port: number;
+    // discogs_token: string;
     credentials_file: string;
 }
 

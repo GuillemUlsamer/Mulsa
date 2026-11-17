@@ -182,6 +182,9 @@ def run_setup(username, password, music_dir, share_dir=None, credentials_file=No
         'share_dir': share_dir or '',
         'yml_version': YML_VERSION,
         'listen_port': listen_port,
+        # Token personal de Discogs, sin uso: Mulsa va con las claves de la app. Si algun dia
+        # hace falta, anadir discogs_token='' a la firma de run_setup y descomentar.
+        # 'discogs_token': discogs_token,
     })
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2)

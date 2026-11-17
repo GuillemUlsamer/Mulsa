@@ -23,6 +23,7 @@ export class Settings implements OnInit, OnDestroy {
     share_dir: '',
     credentials_file: '',
     listen_port: 50300,
+    // discogs_token: '',
   });
 
   status = signal('');

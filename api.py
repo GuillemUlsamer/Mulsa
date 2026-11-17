@@ -125,6 +125,7 @@ def get_settings():
     music_dir = config.get("music_dir", str(bootstrap.DEFAULT_MUSIC_DIR))
     share_dir = config.get("share_dir", "")
     listen_port = config.get("listen_port", bootstrap.LISTEN_PORT)
+    # discogs_token = config.get("discogs_token", "")
     credentials_file = str(bootstrap.CREDENTIALS_FILE)
     return {
         "configured": configured,
@@ -133,6 +134,7 @@ def get_settings():
         "share_dir": share_dir,
         "listen_port": listen_port,
         "credentials_file": credentials_file
+        # "discogs_token": discogs_token
     }
 
 @api.get("/auth/google")
@@ -197,6 +199,7 @@ def save_settings(body: dict):
     share = body.get("share_dir", "").strip() or None
     port = str(body.get("listen_port", bootstrap.LISTEN_PORT)).strip()
     creds = body.get("credentials_file", str(bootstrap.CREDENTIALS_FILE)).strip()
+    # discogs_token = body.get("discogs_token", "").strip()
 
     if not pwd:
         pwd = bootstrap.read_soulseek_password() or ""
@@ -220,6 +223,7 @@ def save_settings(body: dict):
                 credentials_file=creds or None,
                 progress=log.line,
                 listen_port=port_num,
+                # discogs_token=discogs_token,
             )
         except Exception as e:
             log.line(f"Error during setup: {e}", "error")
