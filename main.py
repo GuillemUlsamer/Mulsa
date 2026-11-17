@@ -30,6 +30,7 @@ if __name__ == "__main__":
     port = free_port()
     threading.Thread(target=serve, args=(port,), daemon=True).start()
     wait_for(port)
-    window = webview.create_window("Mulsa", f"http://127.0.0.1:{port}", width=1200, height=700, resizable=True, maximized=True)
+    # marco nativo (snap, maximizar y redimensionar de Windows) con el titulo vacio: el nombre ya va dentro
+    window = webview.create_window("", f"http://127.0.0.1:{port}", width=1200, height=700, resizable=True, maximized=True)
     api_module.window = window
     webview.start()

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, HostListener, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Api, Playlist } from '../api';
@@ -22,6 +22,13 @@ export class Playlists implements OnInit, OnDestroy {
   selected = signal<{ p: Playlist; el: HTMLElement | null } | null>(null);
   // true cuando volvemos del runner: el disco sale abierto y se cierra
   reverse = signal(false);
+  fileOpen = signal(false);
+
+  // un clic fuera del menu lo cierra
+  @HostListener('document:click')
+  closeMenu() {
+    this.fileOpen.set(false);
+  }
 
   ngOnInit() { 
     if (this.playlists().length === 0 || this.api.playlistsStale()) this.load();
