@@ -31,6 +31,13 @@ jobs:
           npm ci
           npx ng build
 
+      # Claves de Google y Discogs: no estan en el repo, se crean desde los secretos del repositorio
+      - name: API clients
+        shell: bash
+        run: |
+          echo '${{ secrets.GOOGLE_CLIENT_JSON }}' > assets/google_client.json
+          echo '${{ secrets.DISCOGS_CLIENT_JSON }}' > assets/discogs_client.json
+
       - name: Build app
         run: python -m PyInstaller --noconfirm Mulsa.spec
 

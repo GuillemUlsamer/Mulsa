@@ -18,6 +18,7 @@ import requests
 import bootstrap
 import log
 import gauth
+import discogs
 from stop import check_stop
 from tagging import sanitize_filename, clean_artist, clean_title, tag_file
 from downloader import download_track
@@ -182,6 +183,127 @@ def list_playlists(with_images=True, workers=8):
     with ThreadPoolExecutor(max_workers=workers) as pool:
         list(pool.map(fill, playlists))
     return list_xlsx_playlists() + playlists
+
+# ---------- crear y rellenar playlists (lo que hacia playlistHelper.gs) ----------
+# Formato (anchos, casillas, ocultar columnas...) no tiene atajo en gspread: va por
+# batch_update, una lista de "requests" de la API de Sheets. Indices desde 0, fin exclusivo.
+RELEASES_SHEET = 'Releases'
+VOLUME_HEADERS = ['Track #', 'Artist', 'Title', 'Duration', 'Cumulative', 'Add to Playlist', 'Notes']
+VOLUME_WIDTHS = [60, 300, 400, 80, 80, 100, 150]
+
+def _col_width(ws, col, px):
+    return {'updateDimensionProperties': {
+        'range': {'sheetId': ws.id, 'dimension': 'COLUMNS', 'startIndex': col, 'endIndex': col + 1},
+        'properties': {'pixelSize': px}, 'fields': 'pixelSize'}}
+
+def _grid(ws, row0, row1, col0, col1):
+    rng = {'sheetId': ws.id, 'startRowIndex': row0, 'startColumnIndex': col0, 'endColumnIndex': col1}
+    if row1 is not None:
+        rng['endRowIndex'] = row1
+    return rng
+
+def create_playlist(client, name, folder_id=None):
+    return client.create(name, folder_id=folder_id or None)
+
+# Pestana Releases la primera, con cabeceras y anchos. Se llama cada vez, como el script.
+def _releases_sheet(spreadsheet):
+    try:
+        ws = spreadsheet.worksheet(RELEASES_SHEET)
+    except gspread.WorksheetNotFound:
+        ws = spreadsheet.add_worksheet(RELEASES_SHEET, rows=100, cols=3, index=0)
+    ws.update(values=[['NAME OF THE ALBUM', 'YEAR', 'COVER']], range_name='A1:C1')
+    spreadsheet.batch_update({'requests': [
+        _col_width(ws, 0, 320), _col_width(ws, 1, 100), _col_width(ws, 2, 220),
+        {'updateSheetProperties': {'properties': {'sheetId': ws.id, 'index': 0}, 'fields': 'index'}},
+    ]})
+    return ws
+
+def setup_sheet(spreadsheet, vol_num):
+    _releases_sheet(spreadsheet)
+    requests = []
+    for i in range(1, vol_num + 1):
+        title = f'V {i}'
+        try:
+            ws = spreadsheet.worksheet(title)
+        except gspread.WorksheetNotFound:
+            ws = spreadsheet.add_worksheet(title, rows=200, cols=11)
+        ws.batch_clear(['A:G'])
+        ws.update(values=[VOLUME_HEADERS], range_name='A1:G1')
+        ws.update(values=[['Album', 'Year', 'CoverURL']], range_name='I1:K1')
+        requests += [_col_width(ws, c, w) for c, w in enumerate(VOLUME_WIDTHS)]
+        # quitar casillas y formato de un setup anterior
+        requests.append({'setDataValidation': {'range': _grid(ws, 1, None, 0, 7)}})
+        requests.append({'repeatCell': {'range': _grid(ws, 1, None, 0, 11),
+                                        'cell': {'userEnteredFormat': {}}, 'fields': 'userEnteredFormat'}})
+        requests.append({'updateDimensionProperties': {
+            'range': {'sheetId': ws.id, 'dimension': 'COLUMNS', 'startIndex': 7, 'endIndex': 11},
+            'properties': {'hiddenByUser': True}, 'fields': 'hiddenByUser'}})
+    # la pestana vacia que Google crea por defecto sobra
+    for ws in spreadsheet.worksheets():
+        if ws.title in ('Sheet1', 'Hoja 1') and len(spreadsheet.worksheets()) > 1:
+            requests.append({'deleteSheet': {'sheetId': ws.id}})
+    spreadsheet.batch_update({'requests': requests})
+
+def import_release(spreadsheet, vol_title, release_id, token=''):
+    ws = spreadsheet.worksheet(vol_title)
+    ws.batch_clear(['A2:G'])
+    data = discogs.release(release_id, token)
+    album = data.get('title', '')
+    year = data.get('year', '')
+    images = data.get('images') or []
+    cover = images[0].get('uri', '') if images else ''
+    ws.update(values=[[album, year, cover]], range_name='I1:K1')
+
+    rows = []
+    cumulative = 0
+    counter = 1
+    for track in data.get('tracklist', []):
+        if track.get('type_') != 'track':
+            continue
+        seconds = parse_duration(track.get('duration') or '0:00')
+        cumulative += seconds
+        position = track.get('position') or f'{counter:02d}'
+        counter += 1
+        artists = track.get('artists') or data.get('artists') or []
+        # Sheets guarda las horas como fraccion de dia; con formato [h]:mm:ss se ven como duracion
+        rows.append([position, ' & '.join(a['name'] for a in artists), track.get('title', ''),
+                     seconds / 86400, cumulative / 86400, False, ''])
+    if rows:
+        ws.update(values=rows, range_name=f'A2:G{len(rows) + 1}')
+        spreadsheet.batch_update({'requests': [
+            {'repeatCell': {'range': _grid(ws, 1, len(rows) + 1, 3, 5),
+                            'cell': {'userEnteredFormat': {'numberFormat': {'type': 'TIME', 'pattern': '[h]:mm:ss'}}},
+                            'fields': 'userEnteredFormat.numberFormat'}},
+            # la "casilla" de Sheets es una validacion booleana con interfaz
+            {'setDataValidation': {'range': _grid(ws, 1, len(rows) + 1, 5, 6),
+                                   'rule': {'condition': {'type': 'BOOLEAN'}, 'strict': True, 'showCustomUi': True}}},
+            {'repeatCell': {'range': _grid(ws, 1, len(rows) + 1, 0, 7),
+                            'cell': {'userEnteredFormat': {'horizontalAlignment': 'LEFT'}},
+                            'fields': 'userEnteredFormat.horizontalAlignment'}},
+        ]})
+    _append_release(spreadsheet, album, year, cover)
+    return album
+
+def _append_release(spreadsheet, album, year, cover):
+    ws = _releases_sheet(spreadsheet)
+    row = max(len(ws.get_all_values()) + 1, 2)
+    formula = '=IMAGE("' + cover.replace('"', '""') + '")' if cover else ''
+    # USER_ENTERED: que la formula se evalue en vez de guardarse como texto
+    ws.update(values=[[album, year, formula]], range_name=f'A{row}:C{row}', value_input_option='USER_ENTERED')
+    spreadsheet.batch_update({'requests': [{'updateDimensionProperties': {
+        'range': {'sheetId': ws.id, 'dimension': 'ROWS', 'startIndex': row - 1, 'endIndex': row},
+        'properties': {'pixelSize': 180}, 'fields': 'pixelSize'}}]})
+
+def import_list(spreadsheet, list_id, token='', progress=log.line):
+    data = discogs.list_items(list_id, token)
+    items = [it for it in data.get('items', []) if it.get('type') == 'release']
+    if not items:
+        raise RuntimeError('The list has no releases.')
+    setup_sheet(spreadsheet, len(items))
+    for i, item in enumerate(items, start=1):
+        progress(f'Importing release {i}/{len(items)}...')
+        album = import_release(spreadsheet, f'V {i}', item['id'], token)
+        progress(f'V {i}: {album}')
 
 # para limpiar el formato de duración, que tenga sentido
 def parse_duration(duration_val):

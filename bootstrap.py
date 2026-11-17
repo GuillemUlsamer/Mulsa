@@ -169,7 +169,9 @@ def run_setup(username, password, music_dir, share_dir=None, credentials_file=No
     api_key = api_key or secrets.token_hex(24)
     write_slskd_yml(username, password, api_key, music_dir, share_dir, listen_port)
 
-    config = {
+    # Partimos de la config existente para no perder claves que escriben otros (drive_folder_id...).
+    config = load_config() if CONFIG_FILE.exists() else {}
+    config.update({
         'url': f'http://127.0.0.1:{WEB_PORT}/api/v0',
         'api_key': api_key,
         'music_dir': str(music_dir),
@@ -180,7 +182,7 @@ def run_setup(username, password, music_dir, share_dir=None, credentials_file=No
         'share_dir': share_dir or '',
         'yml_version': YML_VERSION,
         'listen_port': listen_port,
-    }
+    })
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2)
     progress("Setup complete.")

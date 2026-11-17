@@ -15,6 +15,7 @@ import gauth
 import manager
 import sheets
 import webview
+import gspread
 
 api = FastAPI(title="Mulsa")
 _covers = {}  # diccionario de portadas de playlists, para que no se pidan cada vez
@@ -248,3 +249,56 @@ def import_playlist():
     if not result:
         return {"name": None}
     return {"name": sheets.import_xlsx(result[0])}
+
+# ---------- crear y rellenar playlists de Google ----------
+def _config():
+    return bootstrap.load_config() if bootstrap.CONFIG_FILE.exists() else {}
+
+def _open_playlist(name):
+    client = sheets.setup_gspread()
+    if not client:
+        raise HTTPException(400, "Sign in with Google first.")
+    try:
+        return client.open(name)
+    except gspread.exceptions.SpreadsheetNotFound:
+        raise HTTPException(404, f"Playlist '{name}' not found in Google.")
+
+# Los imports hablan con Discogs y Google durante un rato: van en hilo y avisan por el log.
+def _background(fn, done_msg):
+    def work():
+        try:
+            fn()
+            log.line(done_msg, "done")
+        except Exception as e:
+            log.line(f"Import failed: {e}", "error")
+    threading.Thread(target=work, daemon=True).start()
+    return {"status": "started"}
+
+@api.post("/playlists/new")
+def new_playlist(body: dict):
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(400, "Name is required.")
+    client = sheets.setup_gspread()
+    if not client:
+        raise HTTPException(400, "Sign in with Google first.")
+    spreadsheet = sheets.create_playlist(client, name, _config().get("drive_folder_id"))
+    sheets.setup_sheet(spreadsheet, int(body.get("volumes", 1)))
+    return {"name": name}
+
+@api.post("/playlists/{name}/setup")
+def setup_playlist(name: str, body: dict):
+    sheets.setup_sheet(_open_playlist(name), int(body.get("volumes", 1)))
+    return {"status": "ok"}
+
+@api.post("/playlists/{name}/import-list")
+def import_list(name: str, body: dict):
+    spreadsheet = _open_playlist(name)
+    token = _config().get("discogs_token", "")
+    return _background(lambda: sheets.import_list(spreadsheet, body["list_id"], token), "Import finished.")
+
+@api.post("/playlists/{name}/import-release")
+def import_release(name: str, body: dict):
+    spreadsheet = _open_playlist(name)
+    token = _config().get("discogs_token", "")
+    return _background(lambda: sheets.import_release(spreadsheet, body["volume"], body["release_id"], token), "Import finished.")
