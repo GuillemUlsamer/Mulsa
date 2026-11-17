@@ -54,7 +54,7 @@ export class Api {
     go(commands: any[], state?: object) {
         const page = document.querySelector('app-page');
         const nav = () => this.router.navigate(commands, state ? { state } : undefined);
-        const anim = page?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'linear', fill: 'forwards' });
+        const anim = page?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: 'linear', fill: 'forwards' });
         if (anim) anim.onfinish = nav; else nav();
     }
     private base = '/api';

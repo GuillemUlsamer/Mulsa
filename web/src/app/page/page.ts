@@ -18,6 +18,6 @@ export class Page {
   // cada pantalla entra con un fundido; la salida la hace Api.go() antes de navegar
   constructor() {
     const host = inject<ElementRef<HTMLElement>>(ElementRef);
-    afterNextRender(() => host.nativeElement.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'linear' }));
+    afterNextRender(() => host.nativeElement.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 120, easing: 'linear' }));
   }
 }
