@@ -25,11 +25,14 @@ export class Setup implements OnInit, OnDestroy {
   volumeCount = 1;
   releaseIds: Record<string, string> = {};
   volumes = signal<string[]>([]);
+  sheetUrl = signal('');
+  driveFolder = signal('');
   status = signal('');
   busy = signal(false);
 
   ngOnInit() {
     if (this.name()) this.loadVolumes();
+    else this.api.settings().subscribe(s => this.driveFolder.set(s.drive_folder));
   }
 
   ngOnDestroy() {
@@ -38,9 +41,13 @@ export class Setup implements OnInit, OnDestroy {
 
   loadVolumes() {
     this.api.volumes(this.name()!).subscribe({
-      next: v => { this.volumes.set(v); this.volumeCount = v.length || 1; },
+      next: r => { this.volumes.set(r.volumes); this.sheetUrl.set(r.url); this.volumeCount = r.volumes.length || 1; },
       error: e => this.status.set(e.error?.detail ?? 'Error'),
     });
+  }
+
+  openInDrive() {
+    this.api.openUrl(this.sheetUrl()).subscribe();
   }
 
   create() {

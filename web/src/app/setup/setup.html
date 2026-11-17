@@ -1,6 +1,9 @@
 <app-page [heading]="name() ?? 'New playlist'">
   <button actions class="btn" routerLink="/">&lt; Playlists</button>
   @if (name()) {
+    <button actions class="btn" (click)="openInDrive()" [disabled]="!sheetUrl()">Open in Drive</button>
+  }
+  @if (name()) {
     <button actions class="btn" [routerLink]="['/run', name()]">Run</button>
   }
 
@@ -11,14 +14,22 @@
         <input id="pname" [(ngModel)]="newName" [disabled]="busy()" />
         <button type="button" class="btn btn-primary" (click)="create()" [disabled]="busy()">Create</button>
       </div>
-      <span class="help">Created in your Drive folder, with a Releases sheet and one volume. Then import a list or set up volumes.</span>
+      <span class="help">
+        @if (driveFolder()) { Created in your Drive folder "{{ driveFolder() }}" } @else { Created in the root of your Drive (pick a folder with Add from Google) }
+        with a Releases sheet and one volume.
+      </span>
     } @else {
+      <p class="intro">Either import a Discogs list (one volume per release), or set up N volumes and import a release into each one.
+        Mulsa writes straight into the sheet: open it in Drive to watch the progress.</p>
+
       <label for="list">Discogs list</label>
       <div class="control">
         <input id="list" [(ngModel)]="listId" placeholder="List ID" [disabled]="busy()" />
         <button type="button" class="btn btn-primary" (click)="importList()" [disabled]="busy()">Import list</button>
       </div>
       <span class="help">One volume per release in the list. Replaces the current volumes.</span>
+
+      <p class="or">or</p>
 
       <label for="vols">Volumes</label>
       <div class="control">

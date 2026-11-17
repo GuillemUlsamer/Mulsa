@@ -41,7 +41,7 @@
     async function onPick(data) {
       if (data.action === google.picker.Action.CANCEL) { msg.textContent = 'Cancelled. You can close this tab.'; return; }
       if (data.action !== google.picker.Action.PICKED) return;
-      const folders = data.docs.filter(d => d.mimeType === FOLDER).map(d => d.id);
+      const folders = data.docs.filter(d => d.mimeType === FOLDER).map(d => ({ id: d.id, name: d.name }));
       const files = data.docs.filter(d => d.mimeType !== FOLDER).map(d => d.id);
       const r = await fetch('/api/playlists/google', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

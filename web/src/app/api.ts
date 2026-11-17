@@ -17,6 +17,7 @@ export interface Settings {
     listen_port: number;
     // discogs_token: string;
     credentials_file: string;
+    drive_folder: string;
 }
 
 export interface LogEvent {
@@ -67,7 +68,7 @@ export class Api {
         return this.http.get<{connected: boolean}>(`${this.base}/auth/google`); 
     }
     volumes(name: string) {
-        return this.http.get<string[]>(`${this.base}/playlists/${encodeURIComponent(name)}/volumes`);
+        return this.http.get<{url: string, volumes: string[]}>(`${this.base}/playlists/${encodeURIComponent(name)}/volumes`);
     }
     newPlaylist(name: string, volumes: number) {
         return this.http.post<{name: string}>(`${this.base}/playlists/new`, { name, volumes });
@@ -80,6 +81,9 @@ export class Api {
     }
     importRelease(name: string, volume: string, release_id: string) {
         return this.http.post(`${this.base}/playlists/${encodeURIComponent(name)}/import-release`, { volume, release_id });
+    }
+    openUrl(url: string) {
+        return this.http.post(`${this.base}/open-url`, { url });
     }
     openPicker(origin: string) {
         return this.http.post(`${this.base}/picker/open`, { origin });

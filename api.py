@@ -127,13 +127,15 @@ def get_settings():
     listen_port = config.get("listen_port", bootstrap.LISTEN_PORT)
     # discogs_token = config.get("discogs_token", "")
     credentials_file = str(bootstrap.CREDENTIALS_FILE)
+    drive_folder = config.get("drive_folder_name", "")
     return {
         "configured": configured,
         "soulseek_username": soulseek_username,
         "music_dir": music_dir,
         "share_dir": share_dir,
         "listen_port": listen_port,
-        "credentials_file": credentials_file
+        "credentials_file": credentials_file,
+        "drive_folder": drive_folder
         # "discogs_token": discogs_token
     }
 
@@ -152,6 +154,15 @@ def picker_open(body: dict):
     webbrowser.open(body["origin"] + "/picker.html")
     return {"status": "opened"}
 
+# Un enlace normal navegaria la ventana de Mulsa fuera de la app: las hojas se abren en el navegador.
+@api.post("/open-url")
+def open_url(body: dict):
+    url = body.get("url", "")
+    if not url.startswith("https://docs.google.com/"):
+        raise HTTPException(400, "only Google Docs links")
+    webbrowser.open(url)
+    return {"status": "opened"}
+
 # Recibe lo elegido en el selector. Las hojas quedan autorizadas en Google al elegirlas.
 # Una carpeta no da acceso a su contenido (limite de drive.file): solo se guarda como destino
 # donde Mulsa creara las playlists nuevas.
@@ -165,7 +176,8 @@ def add_google_playlists(body: dict):
     if folders:
         if bootstrap.CONFIG_FILE.exists():
             config = bootstrap.load_config()
-            config["drive_folder_id"] = folders[0]
+            config["drive_folder_id"] = folders[0]["id"]
+            config["drive_folder_name"] = folders[0]["name"]
             with open(bootstrap.CONFIG_FILE, "w", encoding="utf-8") as f:
                 json.dump(config, f, indent=2)
         parts.append("folder saved for new playlists")
@@ -281,7 +293,8 @@ def _background(fn, done_msg):
 @api.get("/playlists/{name}/volumes")
 def playlist_volumes(name: str):
     spreadsheet = _open_playlist(name)
-    return [ws.title for ws in spreadsheet.worksheets() if ws.title != sheets.RELEASES_SHEET]
+    return {"url": spreadsheet.url,
+            "volumes": [ws.title for ws in spreadsheet.worksheets() if ws.title != sheets.RELEASES_SHEET]}
 
 @api.post("/playlists/new")
 def new_playlist(body: dict):
