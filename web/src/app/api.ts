@@ -49,6 +49,8 @@ export class Api {
     private http = inject(HttpClient);
     private base = '/api';
     playlistsCache = signal<Playlist[]>([]);
+    // true: la lista cambio (run, setup...); Playlists la recarga por detras sin vaciarla
+    playlistsStale = signal(false);
     running = signal(false);
     // ficha ya cargada en la pantalla 2, para que el runner abra con los datos listos
     infoCache = new Map<string, PlaylistInfo>();

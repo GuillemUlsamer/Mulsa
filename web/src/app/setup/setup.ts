@@ -56,7 +56,7 @@ export class Setup implements OnInit, OnDestroy {
     this.busy.set(true);
     this.status.set('Creating...');
     this.api.newPlaylist(name, 1).subscribe({
-      next: () => { this.api.playlistsCache.set([]); this.router.navigate(['/setup', name]); },
+      next: () => { this.api.playlistsStale.set(true); this.router.navigate(['/setup', name]); },
       error: e => { this.busy.set(false); this.status.set(e.error?.detail ?? 'Error'); },
     });
   }
@@ -92,7 +92,7 @@ export class Setup implements OnInit, OnDestroy {
       this.status.set(e.text);
       if (e.text.startsWith('Import finished') || e.text.startsWith('Import failed')) {
         this.busy.set(false);
-        this.api.playlistsCache.set([]);
+        this.api.playlistsStale.set(true);
         this.loadVolumes();
         this.sub?.unsubscribe();
       }

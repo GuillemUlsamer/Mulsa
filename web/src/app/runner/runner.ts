@@ -176,7 +176,7 @@ export class Runner implements OnInit, OnDestroy {
     const what = this.isGoogle() ? 'Send the sheet to the Drive trash?' : 'Remove the imported xlsx from Mulsa?';
     if (!confirm(`${what}\nDownloaded music is kept.`)) return;
     this.api.deletePlaylist(this.name()).subscribe({
-      next: () => { this.api.playlistsCache.set([]); this.router.navigateByUrl('/'); },
+      next: () => { this.api.playlistsStale.set(true); this.router.navigateByUrl('/'); },
       error: e => alert(e.error?.detail ?? 'Could not delete'),
     });
   }
@@ -186,10 +186,12 @@ export class Runner implements OnInit, OnDestroy {
     this.api.running.set(false);
     this.runState.set('finished');
     this.current.set(null);
+    // lo que se quedo a medias (Stop) vuelve a mostrar el estado de la hoja
+    this.marks.update(map => new Map([...map].filter(([, m]) => m !== 'busy')));
     this.api.summary().subscribe(t => this.summary.set(t));
     // la hoja ya tiene los estados nuevos: refrescamos contadores y la lista de playlists
     this.api.info(this.name()).subscribe(i => this.info.set(i));
-    this.api.playlistsCache.set([]);
+    this.api.playlistsStale.set(true);
   }
 
   private apply(e: LogEvent) {

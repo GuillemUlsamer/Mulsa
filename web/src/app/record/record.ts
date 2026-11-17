@@ -109,8 +109,8 @@ export class SelectedRecord {
     this.panel().nativeElement.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateX(12px)' }], { duration: 250, fill: 'forwards' });
     this.closing = true;
     // tapa abierta a los ~1100 ms; luego fundido a blanco y el runner entra con su propio fade
-    setTimeout(() => this.host.nativeElement.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }), 1200);
-    setTimeout(() => this.open.emit(p), 1500);
+    setTimeout(() => this.host.nativeElement.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 350, fill: 'forwards' }), 2000);
+    setTimeout(() => this.open.emit(p), 2050);
   }
 
   doClose() {

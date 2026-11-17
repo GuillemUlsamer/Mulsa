@@ -22,7 +22,7 @@ export class Playlists implements OnInit, OnDestroy {
   selected = signal<{ p: Playlist; el: HTMLElement | null } | null>(null);
 
   ngOnInit() { 
-    if (this.playlists().length === 0) this.load();
+    if (this.playlists().length === 0 || this.api.playlistsStale()) this.load();
     // al volver del runner, el disco que estaba abierto vuelve a estar seleccionado
     const back = history.state?.selected as string | undefined;
     if (back) {
@@ -38,7 +38,7 @@ export class Playlists implements OnInit, OnDestroy {
   load() {
     this.loading.set(true);
     this.api.playlists().subscribe({
-      next: p => { this.playlists.set(p); this.loading.set(false); },
+      next: p => { this.playlists.set(p); this.api.playlistsStale.set(false); this.loading.set(false); },
       error: () => this.loading.set(false),
     });
   }

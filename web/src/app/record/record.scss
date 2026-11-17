@@ -37,7 +37,7 @@
 // tapa, que gira sobre su borde izquierdo al abrir. El giro de toda la caja (flip) ensena el dorso.
 .big { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateX(3deg) rotateY(-8deg); transition: transform 600ms var(--flip-ease); }
 .big.is-flipped { transform: rotateX(3deg) rotateY(-188deg); }
-.big.is-opening { transform: none; transition: transform 800ms cubic-bezier(.65, 0, .35, 1); }
+.big.is-opening { transform: none; transition: transform 1000ms cubic-bezier(.65, 0, .35, 1); }
 .big-face, .lid-face { position: absolute; inset: 0; overflow: hidden; backface-visibility: hidden; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); background: #DDD; }
 // contain: la imagen entera; detras, la misma imagen ampliada y desenfocada rellena lo que falte
 .big-face img, .lid-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
@@ -53,10 +53,10 @@
 
 .tray-face { position: absolute; inset: 0; transform: translateZ(-6px); background: #E3E5E8; }
 .lid { position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: 0 50%; transform: translateZ(8px) rotateY(0deg); }
-.is-opening .lid { transform: translateZ(8px) rotateY(-180deg); transition: transform 800ms cubic-bezier(.65, 0, .35, 1) 250ms; }
-// el disco da un cuarto de vuelta mientras se abre la caja
-.is-opening .disc { animation: disc-turn 1.6s cubic-bezier(.2, .7, .2, 1) forwards; }
-@keyframes disc-turn { to { transform: rotate(90deg); } }
+.is-opening .lid { transform: translateZ(8px) rotateY(-180deg); transition: transform 1100ms cubic-bezier(.65, 0, .35, 1) 300ms; }
+// el disco arranca rapido y va frenando mientras se abre la caja (vuelta y media)
+.is-opening .disc { animation: disc-turn 2.2s cubic-bezier(.1, .6, .2, 1) forwards; }
+@keyframes disc-turn { to { transform: rotate(540deg); } }
 .lid-back { transform: rotateY(180deg); background: #ECEEF1; }
 .hinge { position: absolute; left: 0; top: 0; bottom: 0; width: 14px; background: rgba(255, 255, 255, .16); border-right: 1px solid rgba(0, 0, 0, .18); }
 
