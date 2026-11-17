@@ -290,6 +290,17 @@ def _background(fn, done_msg):
     threading.Thread(target=work, daemon=True).start()
     return {"status": "started"}
 
+@api.delete("/playlists/{name}")
+def delete_playlist(name: str):
+    path = sheets.xlsx_path(name)
+    if path:
+        path.unlink()
+        return {"status": "deleted"}
+    client = sheets.setup_gspread()
+    if not client or not sheets.trash_sheet(client, name):
+        raise HTTPException(404, f"Playlist '{name}' not found.")
+    return {"status": "trashed"}
+
 @api.get("/playlists/{name}/volumes")
 def playlist_volumes(name: str):
     spreadsheet = _open_playlist(name)

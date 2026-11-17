@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 warnings.filterwarnings('ignore', message='.*Python version.*past its end of life.*')
 
 import gspread
+from gspread.urls import DRIVE_FILES_API_V3_URL
 from google.oauth2.service_account import Credentials
 import requests
 
@@ -165,11 +166,31 @@ def fetch_image(url, timeout=10):
     cached.write_bytes(r.content)
     return r.content
 
+# gspread.list_spreadsheet_files no filtra la papelera: preguntamos a Drive directamente.
+def _list_sheets(client):
+    files = []
+    params = {'q': "mimeType='application/vnd.google-apps.spreadsheet' and trashed = false",
+              'fields': 'nextPageToken,files(id,name)', 'pageSize': 1000}
+    while True:
+        res = client.http_client.request('get', DRIVE_FILES_API_V3_URL, params=params).json()
+        files.extend(res.get('files', []))
+        if not res.get('nextPageToken'):
+            return files
+        params['pageToken'] = res['nextPageToken']
+
+# Papelera de Drive, no borrado definitivo: se recupera durante 30 dias.
+def trash_sheet(client, name):
+    for f in _list_sheets(client):
+        if f['name'] == name:
+            client.http_client.request('patch', f"{DRIVE_FILES_API_V3_URL}/{f['id']}", json={'trashed': True})
+            return True
+    return False
+
 def list_playlists(with_images=True, workers=8):
     client = setup_gspread()
     if not client:
         return list_xlsx_playlists()
-    files = sorted(client.list_spreadsheet_files(), key=lambda f: f['name'].lower())
+    files = sorted(_list_sheets(client), key=lambda f: f['name'].lower())
     playlists = [{'title': f['name'], 'id': f['id'], 'image_url': None, 'image': None, 'year': '', 'source': 'google'} for f in files]
 
     def fill(p):

@@ -43,7 +43,7 @@ export class Api {
     log(){
         return this.http.get(`${this.base}/log`, { responseType: 'text' });
     }
-    saveSettings(body: Omit<Settings, 'configured'> & {soulseek_password: string}) {
+    saveSettings(body: Omit<Settings, 'configured' | 'drive_folder'> & {soulseek_password: string}) {
         return this.http.post(`${this.base}/settings`, body);
     }
     run(name: string){
@@ -66,6 +66,9 @@ export class Api {
     }
     googleStatus(){ 
         return this.http.get<{connected: boolean}>(`${this.base}/auth/google`); 
+    }
+    deletePlaylist(name: string) {
+        return this.http.delete(`${this.base}/playlists/${encodeURIComponent(name)}`);
     }
     volumes(name: string) {
         return this.http.get<{url: string, volumes: string[]}>(`${this.base}/playlists/${encodeURIComponent(name)}/volumes`);
