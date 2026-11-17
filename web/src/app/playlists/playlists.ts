@@ -1,11 +1,12 @@
 import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { Api, Playlist } from '../api';
 import { Page } from '../page/page';
+import { Shelf } from '../shelf/shelf';
 
 @Component({
-  imports: [RouterLink, Page],
+  imports: [RouterLink, Page, Shelf],
   selector: 'app-playlists',
   styleUrl: './playlists.scss',
   templateUrl: './playlists.html',
@@ -13,6 +14,7 @@ import { Page } from '../page/page';
 
 export class Playlists implements OnInit, OnDestroy {
   private api = inject(Api);
+  private router = inject(Router);
   playlists = this.api.playlistsCache;
   loading = signal(false);
   private sub?: Subscription;
@@ -37,8 +39,8 @@ export class Playlists implements OnInit, OnDestroy {
     this.api.importXlsx().subscribe(r => { if (r.name) this.load(); });
   }
 
-  cover(name_playlist: string) {
-    return `/api/playlists/${encodeURIComponent( name_playlist )}/cover`;
+  open(p: Playlist) {
+    this.router.navigate(['/run', p.name]);
   }
   
   // El selector se abre en el navegador del sistema; nos enteramos de que ha acabado por el log.

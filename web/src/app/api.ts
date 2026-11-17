@@ -6,6 +6,7 @@ export interface Playlist {
     name: string;
     cover_url: string | null;
     year: string;
+    volumes: number;
     source: 'google' | 'xlsx';
 }
 

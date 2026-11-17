@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 warnings.filterwarnings('ignore', message='.*Python version.*past its end of life.*')
 
 import gspread
-from gspread.urls import DRIVE_FILES_API_V3_URL
+from gspread.urls import DRIVE_FILES_API_V3_URL, SPREADSHEET_URL
 from google.oauth2.service_account import Credentials
 import requests
 
@@ -123,12 +123,13 @@ def list_xlsx_playlists():
         try:
             wb = openpyxl.load_workbook(p, read_only=True)
             row = next(wb.worksheets[0].iter_rows(min_row=2, max_row=2, max_col=3, values_only=True), ())
+            volumes = sum(1 for n in wb.sheetnames if n != RELEASES_SHEET)
             wb.close()
         except Exception:
-            row = ()
+            row, volumes = (), 0
         year = _cell_text(row[1]) if len(row) > 1 else ''
         match = IMAGE_URL_RE.search(str(row[2]) if len(row) > 2 else '')
-        result.append({'title': p.stem, 'id': None, 'image_url': match.group(1) if match else None, 'image': None, 'year': year, 'source': 'xlsx'})
+        result.append({'title': p.stem, 'id': None, 'image_url': match.group(1) if match else None, 'image': None, 'year': year, 'volumes': volumes, 'source': 'xlsx'})
     return result
 
 def setup_gspread():
@@ -145,16 +146,18 @@ IMAGE_URL_RE = re.compile(r'=IMAGE\(\s*"([^"]+)"', re.IGNORECASE)
 
 COVER_CACHE_DIR = bootstrap.CACHE_DIR / 'covers'
 
+# Dos peticiones: titulos de las pestanas (para contar volumenes) y A2:C2 de la primera
+# (ano y formula de la portada). No se pueden juntar: con `ranges` la API solo devuelve las
+# pestanas que tocan el rango. Devuelve (url_portada, ano, volumenes).
 def _read_header(client, spreadsheet_id):
-    params = {'valueRenderOption': 'FORMULA'}
-    try:
-        data = client.http_client.values_get(spreadsheet_id, 'A2:C2', params=params)
-    except AttributeError:
-        data = client.open_by_key(spreadsheet_id).values_get('A2:C2', params=params)
+    meta = client.http_client.request('get', SPREADSHEET_URL % spreadsheet_id,
+                                      params={'fields': 'sheets.properties.title'}).json()
+    volumes = sum(1 for sh in meta.get('sheets', []) if sh['properties']['title'] != RELEASES_SHEET)
+    data = client.http_client.values_get(spreadsheet_id, 'A2:C2', params={'valueRenderOption': 'FORMULA'})
     row = (data.get('values') or [[]])[0]
     year = row[1] if len(row) > 1 else ''
     match = IMAGE_URL_RE.search(row[2] if len(row) > 2 else '')
-    return (match.group(1) if match else None), str(year)
+    return (match.group(1) if match else None), str(year), volumes
 
 def fetch_image(url, timeout=10):
     COVER_CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -191,11 +194,11 @@ def list_playlists(with_images=True, workers=8):
     if not client:
         return list_xlsx_playlists()
     files = sorted(_list_sheets(client), key=lambda f: f['name'].lower())
-    playlists = [{'title': f['name'], 'id': f['id'], 'image_url': None, 'image': None, 'year': '', 'source': 'google'} for f in files]
+    playlists = [{'title': f['name'], 'id': f['id'], 'image_url': None, 'image': None, 'year': '', 'volumes': 0, 'source': 'google'} for f in files]
 
     def fill(p):
         try:
-            p['image_url'], p['year'] = _read_header(client, p['id'])
+            p['image_url'], p['year'], p['volumes'] = _read_header(client, p['id'])
             if with_images and p['image_url']:
                 p['image'] = fetch_image(p['image_url'])
         except Exception:

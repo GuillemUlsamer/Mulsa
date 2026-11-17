@@ -1,0 +1,62 @@
+// Valores del diseno: design_handoff_mulsa_shelf/README.md
+:host {
+  --text: #1F242E; --muted: #5B6472; --border: #DBE0E6;
+  --wood-back: #E6D6C3; --wood-back-edge: #CDB89F;
+  --wood-top: #A67C58; --wood-front: #8B6243; --wood-front-hi: #B48C69; --wood-front-lo: #6B4A32;
+  --cover: 176px; --depth: 7px; --pad: 40px;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  display: block; padding: 4px 24px 48px;
+}
+:host * { box-sizing: border-box; }
+
+.row { position: relative; }
+
+// panel trasero y balda: sobresalen del contenido por los lados (la pagina tiene 48px de aire)
+.back { position: absolute; left: -12px; right: -12px; background: var(--wood-back); }
+.back.first { border-top: 1px solid var(--wood-back-edge); }
+.back:not(.first) { box-shadow: inset 0 12px 14px -8px rgba(74, 46, 24, .28); }
+.board-top {
+  position: absolute; left: -24px; right: -24px; height: 18px; background: var(--wood-top);
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 100%, 0 100%);
+}
+.board-front {
+  position: absolute; left: -24px; right: -24px; height: 52px; background: var(--wood-front);
+  border-top: 1px solid var(--wood-front-hi); border-bottom: 1px solid var(--wood-front-lo);
+  box-shadow: 0 8px 14px -6px rgba(31, 36, 46, .12);
+}
+
+.slots { position: absolute; inset: 0; display: flex; }
+.slot { position: relative; height: 100%; flex: none; perspective: 900px; }
+
+// el disco: una caja con la portada delante y cantos de plastico gris, como una caja de CD
+.record {
+  position: absolute; top: var(--pad); width: var(--cover); height: var(--cover);
+  transform-style: preserve-3d; transform-origin: 50% 100%;
+  transition: transform 180ms var(--ease); z-index: 3; cursor: pointer;
+}
+// la sombra exterior cae sobre el panel trasero: despega el disco del fondo
+.face { position: absolute; inset: 0; overflow: hidden; background: #DDD; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18), 0 10px 18px 2px rgba(31, 36, 46, .40); }
+.face img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.edge { position: absolute; background: #D9DCE0; }
+.edge-top { left: 0; top: 0; width: 100%; height: var(--depth); transform-origin: 50% 0; transform: rotateX(-90deg); background: #E8EAED; }
+.edge-l, .edge-r { top: 0; width: var(--depth); height: 100%; background: #C3C7CC; }
+.edge-l { left: 0; transform-origin: 0 50%; transform: rotateY(90deg); }
+.edge-r { right: 0; transform-origin: 100% 50%; transform: rotateY(-90deg); }
+
+// sombra que el disco proyecta sobre la balda; la etiqueta queda por encima para que se lea
+.cast {
+  position: absolute; height: 22px; background: rgba(31, 36, 46, .16); filter: blur(6px);
+  z-index: 1; pointer-events: none; transition: all 180ms var(--ease);
+}
+.tag {
+  position: absolute; height: 40px; background: #F1F2F4; border: 1px solid var(--border); border-radius: 2px;
+  padding: 4px 7px; display: flex; flex-direction: column; justify-content: space-between; z-index: 2;
+}
+.tag-name { font-size: 13px; font-weight: 700; line-height: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tag-meta { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.tag-year { font-size: 12px; line-height: 14px; color: var(--muted); }
+.tag-vols { font-size: 12px; font-weight: 700; line-height: 14px; padding: 0 4px; border: 1px solid var(--text); border-radius: 2px; white-space: nowrap; }
+
+// hover solo desde la portada: :has() mira si el disco del hueco esta bajo el raton
+.record:hover { transform: translateY(-12px) scale(1.07); }
+.slot:has(.record:hover) .cast { height: 44px; filter: blur(12px); opacity: .7; transform: translateY(10px) scaleX(1.08); }

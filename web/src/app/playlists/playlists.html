@@ -1,22 +1,11 @@
-<app-page heading="Playlists">
+<app-page heading="Mulsa">
   <button actions class="btn" routerLink="/setup">New playlist</button>
   <button actions class="btn" (click)="addFromGoogle()">Add from Google</button>
   <button actions class="btn" (click)="importXlsx()">Import xlsx</button>
   <button actions class="btn" routerLink="/settings">Settings</button>
 
-  <p class="hint">Choose a playlist to download</p>
-  <div class="grid">
-    @for (p of playlists(); track p.name) {
-      <a class="card" [routerLink]="['/run', p.name]">
-        <img [src]="cover(p.name)" [alt]="p.name" />
-        <div class="text">
-          <span class="name">{{ p.name }}</span>
-          <span class="sub">{{ p.year }}@if (p.source === 'xlsx') { · xlsx}</span>
-        </div>
-      </a>
-    }
-  </div>
+  <app-shelf [playlists]="playlists()" (select)="open($event)" />
 
-  <p footer class="available">{{ playlists().length }} playlists available</p>
+  <p footer class="available">{{ playlists().length }} playlists</p>
   <button footer class="btn" (click)="load()" [disabled]="loading()">Refresh</button>
 </app-page>
