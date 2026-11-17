@@ -2,6 +2,7 @@ import json
 import queue
 import threading
 import sys
+import webbrowser
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -141,6 +142,34 @@ def google_status():
 def google_picker():
     creds = gauth.load_credentials()
     return {"token": creds.token if creds else None, "api_key": gauth.PICKER_API_KEY, "app_id": gauth.PROJECT_NUMBER}
+
+# El selector de Google se abre en el navegador del sistema (ver web/public/picker.html).
+@api.post("/picker/open")
+def picker_open(body: dict):
+    webbrowser.open(body["origin"] + "/picker.html")
+    return {"status": "opened"}
+
+# Recibe lo elegido en el selector. Las hojas ya quedan autorizadas en Google al elegirlas;
+# de una carpeta solo vemos lo que Google nos deje, y la guardamos para crear playlists dentro.
+@api.post("/playlists/google")
+def add_google_playlists(body: dict):
+    files = body.get("files", [])
+    folders = body.get("folders", [])
+    parts = []
+    if files:
+        parts.append(f"{len(files)} sheets added")
+    if folders:
+        client = sheets.setup_gspread()
+        visible = sum(len(client.list_spreadsheet_files(folder_id=fid)) for fid in folders)
+        if bootstrap.CONFIG_FILE.exists():
+            config = bootstrap.load_config()
+            config["drive_folder_id"] = folders[0]
+            with open(bootstrap.CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump(config, f, indent=2)
+        parts.append(f"folder saved, {visible} sheets visible inside")
+    message = "Google playlists: " + (", ".join(parts) or "nothing selected") + "."
+    log.line(message, "done")
+    return {"message": message}
 
 @api.post("/auth/google")
 def google_login():

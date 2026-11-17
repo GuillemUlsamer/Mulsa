@@ -3,7 +3,6 @@ from pathlib import Path
 
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
-from google_auth_oauthlib import flow
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 import bootstrap
@@ -19,7 +18,7 @@ TOKEN_FILE = bootstrap.GOOGLE_TOKEN_FILE
 def load_credentials():
     if not TOKEN_FILE.exists():
         return None
-    creds = flow.run_local_server(host='127.0.0.1', port=0, authorization_prompt_message='')
+    creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
     if creds.expired and creds.refresh_token:
         creds.refresh(Request())
         TOKEN_FILE.write_text(creds.to_json(), encoding='utf-8')
@@ -29,7 +28,9 @@ def load_credentials():
 # recibir la respuesta de Google y guarda el token. Bloquea hasta que el usuario acepta.
 def login():
     flow = InstalledAppFlow.from_client_secrets_file(CLIENT_FILE, SCOPES)
-    creds = flow.run_local_server(port=0, authorization_prompt_message='')
+    # prompt='consent': sin esto, a partir del segundo login Google no devuelve refresh_token
+    # y la sesion muere a la hora.
+    creds = flow.run_local_server(host='127.0.0.1', port=0, prompt='consent', authorization_prompt_message='')
     TOKEN_FILE.write_text(creds.to_json(), encoding='utf-8')
     return creds
 

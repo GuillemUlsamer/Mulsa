@@ -1,10 +1,8 @@
-import { Component, inject, OnInit, signal} from '@angular/core';
-import { RouterLink, Router} from '@angular/router';
+import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { Api, Playlist } from '../api';
 import { Page } from '../page/page';
-
-declare const gapi: any;
-declare const google: any;
 
 @Component({
   imports: [RouterLink, Page],
@@ -13,14 +11,18 @@ declare const google: any;
   templateUrl: './playlists.html',
 })
 
-export class Playlists implements OnInit {
+export class Playlists implements OnInit, OnDestroy {
   private api = inject(Api);
-  private router = inject(Router);
   playlists = this.api.playlistsCache;
   loading = signal(false);
+  private sub?: Subscription;
 
   ngOnInit() { 
     if (this.playlists().length === 0) this.load();
+  }
+
+  ngOnDestroy() {
+    this.sub?.unsubscribe();
   }
 
   load() {
@@ -39,23 +41,14 @@ export class Playlists implements OnInit {
     return `/api/playlists/${encodeURIComponent( name_playlist )}/cover`;
   }
   
+  // El selector se abre en el navegador del sistema; nos enteramos de que ha acabado por el log.
   addFromGoogle() {
-    this.api.pickerConfig().subscribe(cfg => {
-      if (!cfg.token) { this.router.navigateByUrl('/settings'); return; }
-      gapi.load('picker', () => {
-        const picker = new google.picker.PickerBuilder()
-          .setOAuthToken(cfg.token)
-          .setDeveloperKey(cfg.api_key)
-          .setAppId(cfg.app_id)
-          .setOrigin(location.protocol + '//' + location.host)
-          .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-          .addView(google.picker.ViewId.SPREADSHEETS)
-          .setCallback((data: any) => {
-            if (data.action === google.picker.Action.PICKED) this.load();
-          })
-          .build();
-        picker.setVisible(true);
-      });
+    this.api.openPicker(location.origin).subscribe();
+    this.sub?.unsubscribe();
+    this.sub = this.api.events().subscribe(e => {
+      if (e.kind !== 'line' || !e.text.startsWith('Google playlists')) return;
+      this.load();
+      this.sub?.unsubscribe();
     });
   }
 }

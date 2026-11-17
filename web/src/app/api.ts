@@ -65,8 +65,8 @@ export class Api {
     googleStatus(){ 
         return this.http.get<{connected: boolean}>(`${this.base}/auth/google`); 
     }
-    pickerConfig() {
-        return this.http.get<{token: string | null, api_key: string, app_id: string}>(`${this.base}/auth/google/picker`);
+    openPicker(origin: string) {
+        return this.http.post(`${this.base}/picker/open`, { origin });
     }
     googleLogin(){ 
         return this.http.post(`${this.base}/auth/google`, {}); 
