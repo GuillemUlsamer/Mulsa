@@ -33,16 +33,15 @@
 }
 .floor-shadow { position: absolute; left: 36px; right: 36px; bottom: -34px; height: 40px; background: rgba(20, 24, 32, .50); filter: blur(22px); border-radius: 50%; }
 
-// caja con seis caras: frente y dorso ocultan su reverso para que el giro ensene la otra
+// caja con seis caras: el dorso (contraportada), los cantos, la bandeja con el disco y la
+// tapa, que gira sobre su borde izquierdo al abrir. El giro de toda la caja (flip) ensena el dorso.
 .big { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateX(3deg) rotateY(-8deg); transition: transform 600ms var(--flip-ease); }
-// gira de derecha a izquierda (angulo negativo)
 .big.is-flipped { transform: rotateX(3deg) rotateY(-188deg); }
-.big-face { position: absolute; inset: 0; overflow: hidden; backface-visibility: hidden; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); background: #DDD; }
+.big.is-opening { transform: none; transition: transform 800ms cubic-bezier(.65, 0, .35, 1); }
+.big-face, .lid-face { position: absolute; inset: 0; overflow: hidden; backface-visibility: hidden; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); background: #DDD; }
 // contain: la imagen entera; detras, la misma imagen ampliada y desenfocada rellena lo que falte
-.big-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
-.big-face img.blur { object-fit: cover; filter: blur(24px) brightness(.9); transform: scale(1.3); }
-.big-front { transform: translateZ(calc(var(--big-depth) / 2)); }
-.hinge { position: absolute; left: 0; top: 0; bottom: 0; width: 14px; background: rgba(255, 255, 255, .16); border-right: 1px solid rgba(0, 0, 0, .18); }
+.big-face img, .lid-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+.big-face img.blur, .lid-face img.blur { object-fit: cover; filter: blur(24px) brightness(.9); transform: scale(1.3); }
 .big-back { transform: rotateY(180deg) translateZ(calc(var(--big-depth) / 2)); background: #ECEEF1; }
 .big-edge { position: absolute; background: var(--case-side); }
 .big-edge.l, .big-edge.r { top: 0; left: calc((var(--big) - var(--big-depth)) / 2); width: var(--big-depth); height: var(--big); }
@@ -51,6 +50,15 @@
 .big-edge.r { transform: rotateY(90deg) translateZ(calc(var(--big) / 2)); }
 .big-edge.t { transform: rotateX(90deg) translateZ(calc(var(--big) / 2)); background: var(--case-top); }
 .big-edge.b { transform: rotateX(-90deg) translateZ(calc(var(--big) / 2)); }
+
+.tray-face { position: absolute; inset: 0; transform: translateZ(-6px); background: #E3E5E8; }
+.lid { position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: 0 50%; transform: translateZ(8px) rotateY(0deg); }
+.is-opening .lid { transform: translateZ(8px) rotateY(-180deg); transition: transform 800ms cubic-bezier(.65, 0, .35, 1) 250ms; }
+// el disco da un cuarto de vuelta mientras se abre la caja
+.is-opening .disc { animation: disc-turn 1.6s cubic-bezier(.2, .7, .2, 1) forwards; }
+@keyframes disc-turn { to { transform: rotate(90deg); } }
+.lid-back { transform: rotateY(180deg); background: #ECEEF1; }
+.hinge { position: absolute; left: 0; top: 0; bottom: 0; width: 14px; background: rgba(255, 255, 255, .16); border-right: 1px solid rgba(0, 0, 0, .18); }
 
 // dorso sin imagen: lista de temas a dos columnas
 .tracklist { position: absolute; inset: 0; padding: 24px 24px 20px 34px; display: flex; flex-direction: column; gap: 12px; color: var(--text); }
@@ -80,3 +88,19 @@
 .p-bar > div { height: 100%; background: var(--text); }
 .p-actions { margin-top: 24px; display: flex; gap: 6px; }
 .p-actions .btn { min-width: 72px; padding: 0 14px; }
+
+// bandeja y disco (design_handoff_mulsa_runner/README.md)
+.tray { position: absolute; inset: 0; background: #E3E5E8; border: 1px solid #C9CDD2; }
+.ring { position: absolute; left: 3%; top: 3%; width: 94%; height: 94%; border-radius: 50%; background: #DADDE1; box-shadow: inset 0 1px 3px rgba(31, 36, 46, .18); }
+.notch { position: absolute; top: 42%; width: 4%; height: 16%; background: #D0D3D8; }
+.notch.l { left: 0; border-radius: 0 6px 6px 0; }
+.notch.r { right: 0; border-radius: 6px 0 0 6px; }
+.clip { position: absolute; left: 0; width: 2.5%; height: 9%; background: #CDD1D6; border: 1px solid #BFC4CA; }
+.clip.t { top: 6%; }
+.clip.b { bottom: 6%; }
+.disc { position: absolute; left: 6%; top: 6%; width: 88%; height: 88%; border-radius: 50%; overflow: hidden; background: #D7DADF; box-shadow: 0 2px 8px rgba(31, 36, 46, .25), inset 0 0 0 2px rgba(255, 255, 255, .55), inset 0 0 0 3px rgba(0, 0, 0, .10); }
+.disc img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.rainbow { position: absolute; inset: 0; border-radius: 50%; mix-blend-mode: screen;
+  background: conic-gradient(from 20deg, transparent 0 8%, rgba(255, 170, 120, .22) 14%, transparent 20% 30%, rgba(120, 200, 255, .22) 38%, transparent 44% 55%, rgba(200, 140, 255, .2) 62%, transparent 68% 78%, rgba(160, 255, 190, .2) 86%, transparent 92%); }
+.hub { position: absolute; left: 33%; top: 33%; width: 34%; height: 34%; border-radius: 50%; background: #E9EBEE; box-shadow: 0 0 0 1px rgba(0, 0, 0, .08);
+  &::after { content: ''; position: absolute; left: 32%; top: 32%; width: 36%; height: 36%; border-radius: 50%; background: #C9CDD2; box-shadow: inset 0 1px 3px rgba(31, 36, 46, .3); } }

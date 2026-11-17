@@ -12,6 +12,7 @@ export interface Playlist {
 
 export interface Track {
     n: string;
+    row: number;
     artist: string;
     title: string;
     marked: boolean;
@@ -19,7 +20,7 @@ export interface Track {
 }
 
 export interface PlaylistInfo {
-    volumes: { title: string; tracks: Track[] }[];
+    volumes: { title: string; album: string; tracks: Track[] }[];
     marked: number;
     downloaded: number;
     back_cover: boolean;
@@ -49,12 +50,17 @@ export class Api {
     private base = '/api';
     playlistsCache = signal<Playlist[]>([]);
     running = signal(false);
+    // ficha ya cargada en la pantalla 2, para que el runner abra con los datos listos
+    infoCache = new Map<string, PlaylistInfo>();
 
     playlists(){
         return this.http.get<Playlist[]>(`${this.base}/playlists`);
     }
     settings(){
         return this.http.get<Settings>(`${this.base}/settings`);
+    }
+    summary(){
+        return this.http.get(`${this.base}/summary`, { responseType: 'text' });
     }
     log(){
         return this.http.get(`${this.base}/log`, { responseType: 'text' });

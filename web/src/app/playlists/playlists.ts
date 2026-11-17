@@ -19,10 +19,16 @@ export class Playlists implements OnInit, OnDestroy {
   playlists = this.api.playlistsCache;
   loading = signal(false);
   private sub?: Subscription;
-  selected = signal<{ p: Playlist; el: HTMLElement } | null>(null);
+  selected = signal<{ p: Playlist; el: HTMLElement | null } | null>(null);
 
   ngOnInit() { 
     if (this.playlists().length === 0) this.load();
+    // al volver del runner, el disco que estaba abierto vuelve a estar seleccionado
+    const back = history.state?.selected as string | undefined;
+    if (back) {
+      const p = this.playlists().find(x => x.name === back);
+      if (p) this.selected.set({ p, el: null });
+    }
   }
 
   ngOnDestroy() {
@@ -42,7 +48,7 @@ export class Playlists implements OnInit, OnDestroy {
   }
 
   open(p: Playlist) {
-    this.router.navigate(['/run', p.name]);
+    this.router.navigate(['/run', p.name], { state: { opened: true } });
   }
 
   setup(p: Playlist) {

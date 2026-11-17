@@ -133,6 +133,10 @@ def stop():
 def status():
     return {"running": bool(_run_thread and _run_thread.is_alive())}
 
+@api.get("/summary")
+def run_summary():
+    return Response(content=log.summary_text(), media_type="text/plain")
+
 @api.get("/log")
 def full_log():
     detailed = (bootstrap.APP_DIR / 'mulsa.log').read_text(encoding='utf-8')

@@ -1,30 +1,127 @@
-<app-page [heading]="name()">
-  @if (!api.running()) {
-    <button actions class="btn" routerLink="/">&lt; Playlists</button>
-  }
-  @if (!api.running() && isGoogle()) {
+<app-page [heading]="name()" [divided]="true">
+  <button back class="btn" (click)="back()">&lsaquo; Playlists</button>
+  @if (runState() !== 'running' && isGoogle()) {
     <button actions class="btn" [routerLink]="['/setup', name()]">Setup</button>
   }
-  @if (!api.running()) {
+  @if (runState() !== 'running') {
     <button actions class="btn" (click)="remove()">Delete</button>
   }
-  @if (api.running()) {
-    <button actions class="btn" (click)="stop()">Stop</button>
-  } @else {
-    <button actions class="btn btn-primary" (click)="run(name())">Run</button>
-  }
 
-  <div class="list" #list>
-    @for (i of items(); track $index) {
-      <div class="row" [class]="i.tag" [class.song]="i.id">
-        <span class="text">{{ i.text }}</span>
-        @if (i.status) {
-          <span class="status">{{ i.status }}</span>
+  <div class="inside">
+    <!-- libreto: temas del volumen activo -->
+    <div class="booklet" #booklet>
+      @if (activeVolume(); as v) {
+        <div class="vol-head">
+          <span class="vol-title">{{ v.album || v.title }}</span>
+          <span class="vol-meta">{{ v.tracks.length }} tracks · {{ markedIn(v.tracks) }} marked</span>
+        </div>
+        <div class="tracks">
+          @for (t of v.tracks; track t.row) {
+            <div class="track" [class.marked]="t.marked">
+              <span class="n">{{ t.n }}</span>
+              <span class="t">{{ t.artist }} – {{ t.title }}</span>
+              <span class="mark" [class]="mark(v.title, t)">
+                @switch (mark(v.title, t)) {
+                  @case ('done') { <svg viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7" /></svg> }
+                  @case ('verify') { <svg viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7" /><circle cx="13.5" cy="2.5" r="2.2" class="dot" /></svg> }
+                  @case ('failed') { <svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" /></svg> }
+                  @case ('busy') { <span class="spinner"></span> }
+                }
+              </span>
+            </div>
+          }
+        </div>
+      }
+      <div class="vol-tabs">
+        @if (windowStart() > 0) {
+          <button class="tab more" (click)="shiftWindow(-1)">…</button>
+        }
+        @for (v of visibleVolumes(); track v.title) {
+          <button class="tab" [class.active]="v === activeVolume()" (click)="pick(v.title)">{{ v.title }}</button>
+        }
+        @if (windowStart() + 5 < volumes().length) {
+          <button class="tab more" (click)="shiftWindow(1)">…</button>
         }
       </div>
-    }
+    </div>
+
+    <!-- lado del disco -->
+    <div class="col-right" [class.running]="runState() === 'running'" [class.finished]="runState() === 'finished'">
+      @if (runState() === 'idle') {
+        <div class="idle">
+          <div class="tray" #tray>
+            <div class="ring"></div>
+            <div class="notch l"></div><div class="notch r"></div>
+            <div class="clip t"></div><div class="clip b"></div>
+            <div class="disc"><img [src]="cover()" alt="" /><div class="rainbow"></div><div class="hub"></div></div>
+          </div>
+          <div class="info">
+            <div class="p-name">{{ name() }}</div>
+            <div class="p-sub">{{ playlist()?.year }} · {{ volumes().length === 1 ? '1 volume' : volumes().length + ' volumes' }}</div>
+            <div class="p-stats">
+              <div class="p-row"><span class="p-label">Marked songs</span><span class="p-val">{{ info()?.marked ?? '–' }}</span></div>
+              <div class="p-row"><span class="p-label">Downloaded</span><span class="p-val">{{ info() ? info()!.downloaded + ' / ' + info()!.marked : '–' }}</span></div>
+              <div class="p-bar"><div [style.width.%]="info()?.marked ? (info()!.downloaded / info()!.marked) * 100 : 0"></div></div>
+            </div>
+            <div class="p-actions"><button class="btn btn-primary" (click)="run()">Run</button></div>
+          </div>
+        </div>
+      } @else {
+        <div class="status-bar">
+          <div class="status-text">
+            <div class="title">{{ runState() === 'running' ? 'Running' : (stoppedByUser ? 'Stopped' : 'Finished') }}</div>
+            <div class="sub">
+              @if (runState() === 'running') {
+                @if (current(); as c) { {{ c.vol }} of {{ volumes().length }} · {{ c.song }} } @else { Starting... }
+              } @else {
+                {{ counts().done }} downloaded · {{ counts().verify }} to verify · {{ counts().failed }} failed
+              }
+            </div>
+          </div>
+          <div class="status-actions">
+            @if (runState() === 'running') {
+              <button class="btn btn-primary" (click)="stop()">Stop</button>
+              <button class="btn" (click)="copyLog()">Copy log</button>
+            } @else {
+              <button class="btn" (click)="copyLog()">Copy log</button>
+              <button class="btn btn-primary" (click)="run()">Run</button>
+            }
+            <div class="disc mini" [class.spin]="runState() === 'running'"><img [src]="cover()" alt="" /><div class="rainbow"></div><div class="hub"></div></div>
+          </div>
+        </div>
+
+        @if (runState() === 'finished') {
+          <div class="review-box">
+            <div class="head"><span>To review</span><span class="count">{{ review().length }}</span></div>
+            <div class="rows">
+              @for (r of review(); track r.ref) {
+                <div class="row"><span class="kind" [class]="r.kind">{{ r.kind === 'verify' ? 'Verify' : 'Failed' }}</span><span class="ref">{{ r.ref }}</span><span>{{ r.text }}</span></div>
+              } @empty {
+                <div class="row empty">Nothing to review.</div>
+              }
+            </div>
+          </div>
+          <pre class="summary">{{ summary() }}</pre>
+        } @else {
+          <div class="log" #list>
+            @for (i of items(); track $index) {
+              <div class="line" [class.song]="i.id" [class]="i.tag ?? ''">
+                @if (i.id) { <span class="time">{{ i.time }}</span> }
+                <span class="text">{{ i.text }}</span>
+                @if (i.status) { <span class="status">{{ i.status }}</span> }
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
   </div>
 
-  <p footer class="state">{{ api.running() ? 'Running...' : 'Ready' }}</p>
-  <button footer class="btn" (click)="copyLog()" [disabled]="api.running()">Copy log</button>
+  <p footer class="state">
+    @switch (runState()) {
+      @case ('running') { Running · {{ processed() }} of {{ pending() }} pending songs processed }
+      @case ('finished') { {{ volumes().length }} volumes · {{ info()?.marked }} marked · {{ info()?.downloaded }} downloaded · last run: {{ counts().verify }} to verify, {{ counts().failed }} failed }
+      @default { {{ volumes().length }} volumes · {{ info()?.marked ?? '–' }} marked · {{ info()?.downloaded ?? '–' }} downloaded }
+    }
+  </p>
 </app-page>

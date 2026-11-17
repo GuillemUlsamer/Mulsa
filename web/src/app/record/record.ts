@@ -1,4 +1,5 @@
 import { Component, ElementRef, HostListener, afterNextRender, computed, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { Api, Playlist, PlaylistInfo } from '../api';
 
 const EASE = 'cubic-bezier(.2,.7,.2,1)';
@@ -7,6 +8,7 @@ const EASE = 'cubic-bezier(.2,.7,.2,1)';
 // La apertura y el cierre son "FLIP": se mide donde estaba el disco en la balda y donde
 // acaba en el centro, y se anima la diferencia con la Web Animations API.
 @Component({
+  imports: [NgTemplateOutlet],
   selector: 'app-record',
   styleUrl: './record.scss',
   templateUrl: './record.html',
@@ -20,6 +22,7 @@ export class SelectedRecord {
   setup = output<Playlist>();
 
   private api = inject(Api);
+  private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private stage = viewChild.required<ElementRef<HTMLElement>>('stage');
   private big = viewChild.required<ElementRef<HTMLElement>>('big');
   private scrim = viewChild.required<ElementRef<HTMLElement>>('scrim');
@@ -27,6 +30,7 @@ export class SelectedRecord {
 
   current = signal(0);
   flipped = signal(false);
+  opening = signal(false);
   info = signal<PlaylistInfo | null>(null);
   playlist = computed(() => this.playlists()[this.current()]);
   private closing = false;
@@ -44,7 +48,7 @@ export class SelectedRecord {
 
   private load(p: Playlist | undefined) {
     this.info.set(null);
-    if (p) this.api.info(p.name).subscribe({ next: i => this.info.set(i), error: () => this.info.set(null) });
+    if (p) this.api.info(p.name).subscribe({ next: i => { this.info.set(i); this.api.infoCache.set(p.name, i); }, error: () => this.info.set(null) });
   }
 
   cover(name: string) {
@@ -86,6 +90,27 @@ export class SelectedRecord {
     this.panel().nativeElement.animate(
       [{ opacity: 0, transform: 'translateX(12px)' }, { opacity: 1, transform: 'none' }],
       { duration: 200, delay: 180, easing: EASE, fill: 'backwards' });
+  }
+
+  // Abrir la caja: la ficha se va, la caja se endereza y se desplaza hasta que su bisagra
+  // (borde izquierdo) queda en el centro, y la tapa gira 180 grados. A los 620 ms el runner
+  // toma el relevo con las dos mitades planas (ver runner.ts).
+  openCase() {
+    if (this.closing || this.opening()) return;
+    const p = this.playlist();
+    this.flipped.set(false);
+    this.opening.set(true);
+    const stage = this.stage().nativeElement;
+    const rect = stage.getBoundingClientRect();
+    const dx = window.innerWidth / 2 - rect.left;
+    const dy = window.innerHeight / 2 - (rect.top + rect.height / 2);
+    stage.animate([{ transform: 'none' }, { transform: `translate(${dx}px, ${dy}px)` }],
+      { duration: 800, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'forwards' });
+    this.panel().nativeElement.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateX(12px)' }], { duration: 250, fill: 'forwards' });
+    this.closing = true;
+    // tapa abierta a los ~1100 ms; luego fundido a blanco y el runner entra con su propio fade
+    setTimeout(() => this.host.nativeElement.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }), 1200);
+    setTimeout(() => this.open.emit(p), 1500);
   }
 
   doClose() {

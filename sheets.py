@@ -35,6 +35,7 @@ COL_DURATION = 3
 COL_CHECKBOX = 5  # Column F
 COL_STATUS = 6    # Column G
 COL_NOTES = 7     # Column H
+COL_ALBUM = 8     # Column I
 COL_YEAR = 9      # Column J
 COL_COVER = 10    # Column K
 COL_BACK = 11     # Column L (contraportada, solo en hojas importadas desde la app)
@@ -342,20 +343,23 @@ def playlist_info(source):
     marked = downloaded = 0
     back = ''
     for vol_title, rows in source.volumes():
+        if vol_title == RELEASES_SHEET:
+            continue
         header = rows[0] if rows else []
         if not back and len(header) > COL_BACK:
             back = header[COL_BACK]
         tracks = []
-        for row in rows[1:]:
+        for row_num, row in enumerate(rows[1:], start=2):
             if len(row) <= COL_CHECKBOX or not (row[COL_ARTIST].strip() or row[COL_TITLE].strip()):
                 continue
             is_marked = row[COL_CHECKBOX].lower() == 'true'
             status = row[COL_STATUS] if len(row) > COL_STATUS else ''
             marked += is_marked
             downloaded += is_marked and 'Downloaded' in status
-            tracks.append({'n': row[0].strip(), 'artist': row[COL_ARTIST], 'title': row[COL_TITLE],
+            tracks.append({'n': row[0].strip(), 'row': row_num, 'artist': row[COL_ARTIST], 'title': row[COL_TITLE],
                            'marked': is_marked, 'status': status})
-        volumes.append({'title': vol_title, 'tracks': tracks})
+        album = header[COL_ALBUM] if len(header) > COL_ALBUM else ''
+        volumes.append({'title': vol_title, 'album': album, 'tracks': tracks})
     return {'volumes': volumes, 'marked': marked, 'downloaded': downloaded, 'back_cover_url': back or None}
 
 # para limpiar el formato de duración, que tenga sentido
