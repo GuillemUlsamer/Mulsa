@@ -3,6 +3,7 @@ from pathlib import Path
 
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
+from google_auth_oauthlib import flow
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 import bootstrap
@@ -16,7 +17,7 @@ TOKEN_FILE = bootstrap.GOOGLE_TOKEN_FILE
 def load_credentials():
     if not TOKEN_FILE.exists():
         return None
-    creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
+    creds = flow.run_local_server(host='127.0.0.1', port=0, authorization_prompt_message='')
     if creds.expired and creds.refresh_token:
         creds.refresh(Request())
         TOKEN_FILE.write_text(creds.to_json(), encoding='utf-8')
