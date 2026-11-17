@@ -13,7 +13,7 @@
 
   <app-shelf [playlists]="playlists()" (select)="selected.set($event)" />
   @if (selected(); as sel) {
-    <app-record [playlists]="playlists()" [start]="playlists().indexOf(sel.p)" [originEl]="sel.el" [reverse]="reverse()"
+    <app-record [playlists]="playlists()" [start]="indexOf(sel.p.name)" [originEl]="sel.el" [reverse]="reverse()"
       (close)="selected.set(null)" (open)="open($event)" (setup)="setup($event)" />
   }
 

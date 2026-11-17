@@ -1,10 +1,46 @@
-# Mulsa
+<p align="center">
+  <img src="assets/icon.png" width="120" alt="Mulsa" />
+</p>
 
-This project keeps a local music folder in sync with your Google Sheets.
+<h1 align="center">Mulsa</h1>
 
-If you tick a song in your spreadsheet, Mulsa searches for it on Soulseek (through slskd), downloads it, converts it to MP3, writes the metadata (artist, title, album, year, track number and cover art) and reports the status back to the sheet. If you untick a song, it deletes it.
+<p align="center">
+  Your playlists as records on a shelf. Tick the songs you want in a Google Sheet; Mulsa finds them on Soulseek, downloads, converts and tags them.
+</p>
 
-It includes a Google Apps Script (playlistHelper.gs) to import tracklists from Discogs into the sheet.
+<p align="center">
+  <a href="https://github.com/GuillemUlsamer/Mulsa/releases"><img src="https://img.shields.io/github/v/release/GuillemUlsamer/Mulsa?label=download&color=1F242E" alt="Latest release" /></a>
+  <img src="https://img.shields.io/badge/windows-10%2F11-1F242E" alt="Windows" />
+  <img src="https://img.shields.io/badge/python-3.12%2B-1F242E" alt="Python" />
+  <img src="https://img.shields.io/badge/angular-22-1F242E" alt="Angular" />
+</p>
+
+<p align="center">
+  <img src="docs/shelf.png" width="900" alt="The shelf: one record per playlist" />
+</p>
+
+Mulsa keeps a local music folder in sync with your Google Sheets. Each playlist is a sheet (and a record on the shelf): tick a song and Mulsa searches for it on Soulseek (through slskd), downloads it, converts it to MP3, writes the metadata (artist, title, album, year, track number and cover art) and reports the status back to the sheet. Untick it and the next run deletes it. Playlists are created from Discogs releases and lists without leaving the app.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="docs/record.png" alt="Selected record" /></td>
+    <td><img src="docs/runner.png" alt="Inside the record: the runner" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Pick a record: flip it, open it, or set it up.</sub></td>
+    <td align="center"><sub>Inside: the booklet with the tracks, and the live download log.</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/setup.png" alt="Playlist setup" /></td>
+    <td><img src="docs/settings.png" alt="Settings" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Fill the volumes from a Discogs list or one release at a time.</sub></td>
+    <td align="center"><sub>Settings.</sub></td>
+  </tr>
+</table>
 
 ## Features
 - Sync music library with Google Sheets

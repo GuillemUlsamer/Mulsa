@@ -74,6 +74,11 @@ export class Playlists implements OnInit, OnDestroy {
     this.api.importXlsx().subscribe(r => { if (r.name) this.load(); });
   }
 
+  // por nombre: la lista se recarga por detras y los objetos cambian
+  indexOf(name: string) {
+    return Math.max(0, this.playlists().findIndex(p => p.name === name));
+  }
+
   open(p: Playlist) {
     this.router.navigate(['/run', p.name], { state: { opened: true } });
   }
