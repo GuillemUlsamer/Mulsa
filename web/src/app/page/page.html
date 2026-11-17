@@ -1,5 +1,5 @@
 <header class="top">
-  <div class="lead"><ng-content select="[back]" /><h1>{{ heading() }}</h1></div>
+  <div class="lead"><ng-content select="[back]" />@if (logo()) { <img class="logo" src="logo.png" alt="" /> }<h1>{{ heading() }}</h1></div>
   <div class="actions"><ng-content select="[actions]" /></div>
 </header>
 <main class="content" [class.shade]="shade()" [class.divided]="divided()"><ng-content /></main>
