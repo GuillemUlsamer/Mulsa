@@ -20,6 +20,7 @@ import gspread
 api = FastAPI(title="Mulsa")
 _covers = {}  # diccionario de portadas de playlists, para que no se pidan cada vez
 _backs = {}   # contraportadas, rellenado al pedir la ficha de una playlist
+_ids = {}     # nombre -> id de Google, para no listar Drive en cada peticion de cabecera
 
 BASE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 WEB_DIR = BASE_DIR / 'web' / 'dist' / 'web' / 'browser'
@@ -73,10 +74,19 @@ def events():
 # with_images=False porque la imagen va por su propio endpoint (abajo); asi la lista
 # responde rapido y Angular pide cada portada por separado con <img src=...>.
 @api.get("/playlists")
-def playlists():
-    result = sheets.list_playlists(with_images=False)
-    _covers.update({p["title"]: p["image_url"] for p in result})
+def playlists(details: bool = True):
+    result = sheets.list_playlists(with_images=False, details=details)
+    _ids.update({p["title"]: p["id"] for p in result if p["id"]})
+    if details:
+        _covers.update({p["title"]: p["image_url"] for p in result})
     return [{"name": p["title"], "cover_url": p["image_url"], "year": p["year"], "volumes": p["volumes"], "source": p["source"]} for p in result]
+
+# portada, ano y volumenes de una playlist; la estanteria lo pide por cada una tras la lista rapida
+@api.get("/playlists/{name}/header")
+def playlist_header(name: str):
+    cover_url, year, volumes = sheets.playlist_header(name, _ids.get(name))
+    _covers[name] = cover_url
+    return {"cover_url": cover_url, "year": year, "volumes": volumes}
 
 # busca la playlist por su nombre y devuelve la portada
 @api.get("/playlists/{name}/cover")

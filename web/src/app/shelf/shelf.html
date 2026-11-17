@@ -11,16 +11,20 @@
               <div class="tag-name">{{ s.p.name }}</div>
               <div class="tag-meta">
                 <span class="tag-year">{{ s.p.year }}</span>
-                <span class="tag-vols">{{ vols(s.p.volumes) }}</span>
+                <span class="tag-vols" [class.pending]="!s.p.volumes">{{ s.p.volumes ? vols(s.p.volumes) : '…' }}</span>
               </div>
             </div>
             <div class="cast" [style.left.px]="s.left + 4" [style.top.px]="B - 14" [style.width.px]="COVER - 8"></div>
-            <div class="record" #rec [attr.data-name]="s.p.name" [style.left.px]="s.left" (click)="select.emit({ p: s.p, el: rec })">
+            <div class="record" #rec [attr.data-name]="s.p.name" [style.left.px]="s.left">
               <div class="edge edge-top"></div>
               <div class="edge edge-l"></div>
               <div class="edge edge-r"></div>
-              <div class="face"><img [src]="cover(s.p.name)" [alt]="s.p.name" /></div>
+              <div class="face">
+                @if (s.p.cover_url) { <img [src]="cover(s.p.name)" [alt]="s.p.name" /> }
+              </div>
             </div>
+            <!-- zona de raton fija: el disco crece al pasar por encima, pero el area que lo detecta no se mueve -->
+            <div class="hit" [style.left.px]="s.left" (click)="select.emit({ p: s.p, el: rec })"></div>
           }
         </div>
       }

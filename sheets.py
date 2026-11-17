@@ -195,12 +195,16 @@ def trash_sheet(client, name):
             return True
     return False
 
-def list_playlists(with_images=True, workers=8):
+# details=False: solo nombres (rapido); la portada, el ano y los volumenes se piden despues
+# por playlist con playlist_header, para que la estanteria se vaya llenando segun llegan.
+def list_playlists(with_images=True, workers=8, details=True):
     client = setup_gspread()
     if not client:
         return list_xlsx_playlists()
     files = sorted(_list_sheets(client), key=lambda f: f['name'].lower())
     playlists = [{'title': f['name'], 'id': f['id'], 'image_url': None, 'image': None, 'year': '', 'volumes': 0, 'source': 'google'} for f in files]
+    if not details:
+        return list_xlsx_playlists() + playlists
 
     def fill(p):
         try:
@@ -213,6 +217,19 @@ def list_playlists(with_images=True, workers=8):
     with ThreadPoolExecutor(max_workers=workers) as pool:
         list(pool.map(fill, playlists))
     return list_xlsx_playlists() + playlists
+
+# spreadsheet_id evita volver a listar Drive por cada playlist (la lista rapida ya lo dio).
+def playlist_header(name, spreadsheet_id=None):
+    if xlsx_path(name):
+        for p in list_xlsx_playlists():
+            if p['title'] == name:
+                return p['image_url'], p['year'], p['volumes']
+    client = setup_gspread()
+    if not client:
+        return None, '', 0
+    if not spreadsheet_id:
+        spreadsheet_id = next((f['id'] for f in _list_sheets(client) if f['name'] == name), None)
+    return _read_header(client, spreadsheet_id) if spreadsheet_id else (None, '', 0)
 
 # ---------- crear y rellenar playlists (lo que hacia playlistHelper.gs) ----------
 # Formato (anchos, casillas, ocultar columnas...) no tiene atajo en gspread: va por

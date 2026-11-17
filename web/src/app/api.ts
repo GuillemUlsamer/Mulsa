@@ -55,6 +55,12 @@ export class Api {
     // ficha ya cargada en la pantalla 2, para que el runner abra con los datos listos
     infoCache = new Map<string, PlaylistInfo>();
 
+    playlistsQuick(){
+        return this.http.get<Playlist[]>(`${this.base}/playlists`, { params: { details: false } });
+    }
+    header(name: string){
+        return this.http.get<{cover_url: string | null, year: string, volumes: number}>(`${this.base}/playlists/${encodeURIComponent(name)}/header`);
+    }
     playlists(){
         return this.http.get<Playlist[]>(`${this.base}/playlists`);
     }

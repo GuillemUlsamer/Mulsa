@@ -35,10 +35,28 @@ export class Playlists implements OnInit, OnDestroy {
     this.sub?.unsubscribe();
   }
 
+  // Dos fases: la lista de nombres llega rapido y la estanteria se pinta; luego cada disco pide
+  // su portada, ano y volumenes y se va completando segun llegan.
   load() {
     this.loading.set(true);
-    this.api.playlists().subscribe({
-      next: p => { this.playlists.set(p); this.api.playlistsStale.set(false); this.loading.set(false); },
+    this.api.playlistsQuick().subscribe({
+      next: list => {
+        // conservar lo que ya sabiamos de cada una mientras llega lo nuevo
+        const known = new Map(this.playlists().map(p => [p.name, p]));
+        this.playlists.set(list.map(p => known.get(p.name) ? { ...known.get(p.name)!, source: p.source } : p));
+        this.api.playlistsStale.set(false);
+        let left = list.length;
+        if (!left) this.loading.set(false);
+        for (const p of list) {
+          this.api.header(p.name).subscribe({
+            next: h => {
+              this.playlists.update(all => all.map(x => x.name === p.name ? { ...x, ...h } : x));
+              if (--left === 0) this.loading.set(false);
+            },
+            error: () => { if (--left === 0) this.loading.set(false); },
+          });
+        }
+      },
       error: () => this.loading.set(false),
     });
   }
