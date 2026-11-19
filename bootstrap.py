@@ -15,7 +15,10 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 # Datos de la app: %LOCALAPPDATA%\Mulsa (Windows). Fuera del codigo.
-APP_DIR = Path(os.environ.get('LOCALAPPDATA', Path.home())) / 'Mulsa'
+local_appdata = os.environ.get('LOCALAPPDATA')
+if not local_appdata:
+    local_appdata = Path.home() / 'AppData' / 'Local'
+APP_DIR = Path(local_appdata) / 'Mulsa'
 PLAYLISTS_DIR = APP_DIR / 'playlists'
 
 # La app se llamaba Music Manager: si existe la carpeta vieja y no la nueva, se renombra
@@ -26,6 +29,8 @@ if _OLD_APP_DIR.exists() and not APP_DIR.exists():
     _cfg = APP_DIR / 'config.json'
     if _cfg.exists():
         _cfg.write_text(_cfg.read_text(encoding='utf-8').replace(json.dumps(str(_OLD_APP_DIR))[1:-1], json.dumps(str(APP_DIR))[1:-1]), encoding='utf-8')
+
+APP_DIR.mkdir(parents=True, exist_ok=True)
 
 TOOLS_DIR = APP_DIR / 'tools'
 SLSKD_DIR = TOOLS_DIR / 'slskd'

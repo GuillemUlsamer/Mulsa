@@ -5,6 +5,7 @@
 #   line(text, tag)     linea suelta (arranque, fin)
 import threading
 import time
+from pathlib import Path
 
 # _handler lo pone el GUI; _current es la cancion actual, distinta en cada hilo
 _handler = None
@@ -21,6 +22,8 @@ def set_handler(handler):
 def open_file(path):
     global _file
     # se vacia en cada arranque de la app
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
     _file = open(path, 'w', encoding='utf-8')
     _summary.clear()
 
