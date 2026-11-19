@@ -182,6 +182,8 @@ The native file dialogs only work inside the app window: `cd web; ng build; cd .
 To build the exe and the installer (needs [Inno Setup 6](https://jrsoftware.org/isdl.php)):
 
 ```
+If you don't have angular installed:
+npm install -g @angular/cli
 cd web; ng build; cd ..
 python -m pip install pyinstaller
 python -m PyInstaller --noconfirm Mulsa.spec
