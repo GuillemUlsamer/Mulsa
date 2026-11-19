@@ -7,6 +7,7 @@ const COVER = 176;
 const PAD = 40;
 const B = PAD + COVER;
 const ROW_H = 310;
+const GAP = 34;
 // padding lateral del host (shelf.scss): no cuenta como ancho util
 const SIDE = 24;
 // baldas que se ven siempre, aunque esten vacias
@@ -58,8 +59,8 @@ export class Shelf implements OnDestroy {
   // Reparte las playlists en filas de tantos huecos como quepan (minimo 4) segun el ancho; se recalcula sola
   // cuando cambian las playlists o el ancho (computed).
   rows = computed<Slot[][]>(() => {
-    const W = Math.max(600, this.width());
-    const per = Math.max(4, Math.floor(W / (COVER + 44)));
+    const W = Math.max(COVER + GAP, this.width() || 600); // 600 solo antes del primer render
+    const per = Math.max(1, Math.floor(W / (COVER + GAP)));
     const slotW = W / per;
     const tagW = Math.min(slotW - 20, COVER - 16);
     const list = this.playlists();
