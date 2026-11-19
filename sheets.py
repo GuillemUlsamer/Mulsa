@@ -4,6 +4,7 @@ import hashlib
 import shutil
 import warnings
 import datetime
+import time
 import threading
 import openpyxl
 from pathlib import Path
@@ -52,6 +53,9 @@ class GoogleSource:
         self.name = name
         self.sheet = client.open(name)
         self._ws = {}
+        self._pending = {}
+        self._plock = threading.Lock()
+        self._timer = None
 
     # Devuelve [(titulo_volumen, filas)], filas como listas de strings (lo que da get_all_values).
     # Una sola peticion (batchGet) para todos los volumenes en vez de una por pestana.
@@ -62,8 +66,69 @@ class GoogleSource:
         ranges = res.get('valueRanges', [])
         return [(t, (ranges[i].get('values', []) if i < len(ranges) else [])) for i, t in enumerate(titles)]
 
+    # Los estados se acumulan en memoria y se mandan juntos en un solo values.batchUpdate
+    # cada FLUSH_INTERVAL segundos (si una celda cambia varias veces, solo se envia el ultimo valor).
+    # Asi las descargas no esperan a Google: set_status vuelve al instante.
     def set_status(self, volume, row_num, text):
-        self._ws[volume].update_cell(row_num, COL_STATUS + 1, text)
+        with self._plock:
+            self._pending[(volume, row_num)] = text
+            if self._timer is None:
+                self._timer = threading.Timer(FLUSH_INTERVAL, self.flush)
+                self._timer.daemon = True
+                self._timer.start()
+
+    # Envia lo pendiente. Se llama sola por el temporizador y al final de process_playlist.
+    def flush(self):
+        with self._plock:
+            pending, self._pending = self._pending, {}
+            self._timer = None
+        if not pending:
+            return
+        data = [{'range': f"'{vol}'!{_col_letter(COL_STATUS + 1)}{row}", 'values': [[text]]}
+                for (vol, row), text in pending.items()]
+        try:
+            _write_with_retry(lambda: self.sheet.values_batch_update(
+                {'valueInputOption': 'USER_ENTERED', 'data': data}))
+        except Exception:
+            # no perder los estados: se reponen (sin pisar los mas nuevos) para el siguiente flush
+            with self._plock:
+                for k, t in pending.items():
+                    self._pending.setdefault(k, t)
+            raise
+
+def _col_letter(n):
+    s = ''
+    while n:
+        n, r = divmod(n - 1, 26)
+        s = chr(65 + r) + s
+    return s
+
+# Google limita las escrituras a 60/min por usuario y cada cancion hace 2 (con 5 hilos se
+# supera enseguida). Fix 1: se espacian las escrituras entre todos los hilos (~50/min).
+# Fix 2: si aun asi llega un 429, se reintenta con espera creciente en vez de abortar.
+WRITE_INTERVAL = 1.2
+FLUSH_INTERVAL = 2.0
+_write_lock = threading.Lock()
+_last_write = 0.0
+
+def _throttle():
+    global _last_write
+    with _write_lock:
+        wait = _last_write + WRITE_INTERVAL - time.monotonic()
+        if wait > 0:
+            time.sleep(wait)
+        _last_write = time.monotonic()
+
+def _write_with_retry(fn, attempts=6):
+    for n in range(attempts):
+        _throttle()
+        try:
+            return fn()
+        except gspread.exceptions.APIError as e:
+            if e.response.status_code != 429 or n == attempts - 1:
+                raise
+            check_stop()
+            time.sleep(min(60, 5 * 2 ** n))
 
 # Mismo contrato que GoogleSource, sobre una copia local en PLAYLISTS_DIR.
 class XlsxSource:
@@ -76,6 +141,9 @@ class XlsxSource:
     def volumes(self):
         return [(ws.title, [[_cell_text(c) for c in row] for row in ws.iter_rows(values_only=True)])
                 for ws in self.wb.worksheets]
+
+    def flush(self):
+        pass
 
     # openpyxl no escribe celdas sueltas: se cambia en memoria y se guarda el libro entero.
     def set_status(self, volume, row_num, text):
@@ -484,6 +552,7 @@ def process_playlist(source, base_download_dir):
             job.result()
     finally:
         pool.shutdown(wait=True, cancel_futures=True)
+        source.flush()
 
     if review:
         log.line(f"\nTo review ({len(review)}):", "failed")
