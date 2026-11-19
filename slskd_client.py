@@ -58,8 +58,53 @@ def slskd_get(path, **params):
     r.raise_for_status()
     return r.json()
 
+SERVER_ERRORS = (409, 500, 502, 503)
+SERVER_ERRORS_LIMIT = 10
+RECONNECT_WAIT_SEC = 120
+_errors = 0
+_errors_lock = threading.Lock()
+
+def _reset_errors():
+    global _errors
+    with _errors_lock:
+        _errors = 0
+
+def _count_error():
+    global _errors
+    with _errors_lock:
+        _errors += 1
+        if _errors >= SERVER_ERRORS_LIMIT:
+            raise SystemExit(f"slskd rejected {_errors} requests in a row; stopping (nothing marked as failed).")
+
+# Devuelve True si hubo que esperar y slskd volvio; SystemExit si no vuelve a tiempo.
+def _wait_if_disconnected():
+    deadline = time.time() + RECONNECT_WAIT_SEC
+    waited = False
+    while True:
+        try:
+            if slskd_logged_in():
+                return waited
+        except requests.RequestException:
+            pass
+        if time.time() > deadline:
+            raise SystemExit("slskd lost its Soulseek connection and did not recover.")
+        if not waited:
+            log.detail("slskd is not connected to Soulseek, waiting for it to reconnect...")
+            waited = True
+        check_stop()
+        time.sleep(3)
+
 def slskd_post(path, payload):
     r = SESSION.post(f"{slskd_url()}{path}", headers=slskd_headers(), json=payload, timeout=30)
+    if r.status_code in SERVER_ERRORS:
+        # se registra el cuerpo: dice por que slskd rechaza la peticion
+        log.detail(f"slskd answered {r.status_code} to {path}: {r.text[:200]}")
+        if _wait_if_disconnected():
+            _reset_errors()
+        else:
+            _count_error()
+    elif r.ok:
+        _reset_errors()
     r.raise_for_status()
     return r.json() if r.content else None
 
@@ -69,6 +114,7 @@ def slskd_logged_in():
     return 'LoggedIn' in str(app.get('server', {}).get('state', ''))
 
 def ensure_slskd():
+    _reset_errors()   # cada run empieza sin errores arrastrados del anterior
     proc = None
     try:
         if slskd_logged_in():
@@ -282,4 +328,3 @@ def convert_to_mp3(src, dst):
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
         log.detail(f"FFmpeg Error: {e}")
         return False
-
