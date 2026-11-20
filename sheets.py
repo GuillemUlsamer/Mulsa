@@ -318,7 +318,22 @@ def _grid(ws, row0, row1, col0, col1):
     return rng
 
 def create_playlist(client, name, folder_id=None):
-    return client.create(name, folder_id=folder_id or None)
+    spreadsheet = client.create(name, folder_id=folder_id or None)
+    if folder_id:
+        file_url = f"{DRIVE_FILES_API_V3_URL}/{spreadsheet.id}"
+        metadata = client.http_client.request(
+            'get', file_url, params={'fields': 'parents'}
+        ).json()
+        parents = metadata.get('parents', [])
+        if folder_id not in parents:
+            params = {
+                'addParents': folder_id,
+                'supportsAllDrives': 'true',
+            }
+            if parents:
+                params['removeParents'] = ','.join(parents)
+            client.http_client.request('patch', file_url, params=params, json={})
+    return spreadsheet
 
 # Pestana Releases la primera, con cabeceras y anchos. Se llama cada vez, como el script.
 def _releases_sheet(spreadsheet):

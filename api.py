@@ -215,12 +215,12 @@ def add_google_playlists(body: dict):
     if files:
         parts.append(f"{len(files)} sheets added")
     if folders:
-        if bootstrap.CONFIG_FILE.exists():
-            config = bootstrap.load_config()
-            config["drive_folder_id"] = folders[0]["id"]
-            config["drive_folder_name"] = folders[0]["name"]
-            with open(bootstrap.CONFIG_FILE, "w", encoding="utf-8") as f:
-                json.dump(config, f, indent=2)
+        config = bootstrap.load_config() if bootstrap.CONFIG_FILE.exists() else {}
+        config["drive_folder_id"] = folders[0]["id"]
+        config["drive_folder_name"] = folders[0]["name"]
+        bootstrap.CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(bootstrap.CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2)
         parts.append("folder saved for new playlists")
     message = "Google playlists: " + (", ".join(parts) or "nothing selected") + "."
     log.line(message, "done")
