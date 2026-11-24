@@ -1,12 +1,13 @@
 # TODO
 
+
+
 ## 2. Rediseno: restos
 - [ ] Canguro entero para Settings: guardar el dibujo como `web/public/kangaroo.png` (PNG con fondo
   transparente, cuerpo entero, unos 600 px de alto; si pesa mas de ~200 KB, reducirlo como se
   hizo con logo.png). No hay que tocar codigo: `settings.html` ya lo pide y lo oculta si no
   existe; `ng build` lo copia a la raiz del dist. Ocupa la mitad derecha, apoyado en el borde
   inferior (`.mascot` en settings.scss).
-- [ ] Capturas nuevas para el README.
 
 ## 3. Biblioteca dentro de la app
 - [ ] Al llegar aqui, el estado de cada cancion pasa a vivir en Mulsa y se deja de escribir en la

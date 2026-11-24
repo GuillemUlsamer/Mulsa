@@ -10,30 +10,110 @@
           <label for="pname">Name <span class="req">*</span></label>
           <div>
             <div class="control">
-              <input id="pname" [(ngModel)]="newName" placeholder="e.g. Hardcore Overdose" [disabled]="busy()" (keydown.enter)="create()" />
-              <button type="button" class="btn btn-primary" (click)="create()" [disabled]="busy()">Create</button>
+              <input id="pname" [(ngModel)]="newName" placeholder="e.g. Hardcore Overdose" [disabled]="busy()" (keydown.enter)="selectedReleases().length ? createWithReleases() : create()" />
+              <button type="button" class="btn btn-primary" (click)="selectedReleases().length ? createWithReleases() : create()" [disabled]="busy() || !newName.trim()">
+                {{ selectedReleases().length ? 'Create & import (' + selectedReleases().length + ')' : 'Create' }}
+              </button>
             </div>
             <p class="help">
               @if (driveFolder()) { Created in your Drive folder "{{ driveFolder() }}" } @else { Created in the root of your Drive (pick a folder with Add from Google) }
-              with a Releases sheet and one volume.
+              with a Releases sheet and {{ selectedReleases().length || 1 }} {{ selectedReleases().length === 1 || !selectedReleases().length ? 'volume' : 'volumes' }}.
             </p>
           </div>
         </div>
-      </div>
-      <!-- caja vacia que ensena el nombre segun lo escribes -->
-      <div class="paper preview">
-        <div class="stage">
-          <div class="case">
-            <div class="edge t"></div><div class="edge b"></div><div class="edge l"></div><div class="edge r"></div>
-            <div class="front">
-              <div class="hinge"></div>
-              <div class="case-name" [class.empty]="!newName.trim()">{{ newName.trim() || 'Untitled playlist' }}</div>
-              <div class="case-foot"><span>Vol. 1</span><span>No cover yet</span></div>
-            </div>
+
+        <div class="search-box">
+          <h2>Find compilation on Discogs</h2>
+          <div class="control">
+            <input [(ngModel)]="searchQuery" placeholder="e.g. Thunderdome, Hardcore Overdose..." [disabled]="busy() || searching()" (keydown.enter)="searchDiscogs()" />
+            <button type="button" class="btn" (click)="searchDiscogs()" [disabled]="busy() || searching() || !searchQuery.trim()">
+              {{ searching() ? 'Searching…' : 'Search' }}
+            </button>
           </div>
-          <div class="floor"></div>
+          <p class="help">Search releases on Discogs to build your playlist volumes in order.</p>
+
+          @if (searchError()) {
+            <p class="status error">{{ searchError() }}</p>
+          }
+
+          @if (searchResults().length > 0) {
+            <div class="results">
+              @for (r of searchResults(); track r.id) {
+                <div class="card">
+                  @if (r.thumb) {
+                    <img class="thumb" [src]="r.thumb" alt="" />
+                  } @else {
+                    <div class="thumb empty"></div>
+                  }
+                  <div class="info">
+                    <div class="t" [title]="r.title">{{ r.title }}</div>
+                    <div class="m">
+                      @if (r.year) { <span>{{ r.year }}</span> }
+                      @if (r.format?.length) { <span> &middot; {{ r.format.join(', ') }}</span> }
+                    </div>
+                  </div>
+                  <div class="actions">
+                    <button type="button" class="btn btn-sm" (click)="addSelectedRelease(r)" [disabled]="isSelected(r.id)">
+                      {{ isSelected(r.id) ? 'Added' : '+ Add' }}
+                    </button>
+                    <button type="button" class="btn btn-sm" (click)="findSeries(r)" title="Search related volumes of this compilation">
+                      Series
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
         </div>
       </div>
+
+      <!-- panel derecho: vista previa 3D si no hay seleccion, o cola de volumenes si los hay -->
+      @if (selectedReleases().length === 0) {
+        <div class="paper preview">
+          <div class="stage">
+            <div class="case">
+              <div class="edge t"></div><div class="edge b"></div><div class="edge l"></div><div class="edge r"></div>
+              <div class="front">
+                <div class="hinge"></div>
+                <div class="case-name" [class.empty]="!newName.trim()">{{ newName.trim() || 'Untitled playlist' }}</div>
+                <div class="case-foot"><span>Vol. 1</span><span>No cover yet</span></div>
+              </div>
+            </div>
+            <div class="floor"></div>
+          </div>
+        </div>
+      } @else {
+        <div class="paper queue">
+          <div class="queue-head">
+            <div>
+              <div class="title">Volumes in queue</div>
+              <div class="sub">{{ selectedReleases().length }} {{ selectedReleases().length === 1 ? 'release' : 'releases' }} selected</div>
+            </div>
+            <button type="button" class="btn btn-sm" (click)="selectedReleases.set([])">Clear</button>
+          </div>
+          <div class="queue-rows">
+            @for (r of selectedReleases(); track r.id; let idx = $index) {
+              <div class="q-row">
+                <span class="v">V {{ idx + 1 }}</span>
+                @if (r.thumb) {
+                  <img class="thumb" [src]="r.thumb" alt="" />
+                }
+                <div class="name" [title]="r.title">{{ r.title }}</div>
+                <div class="btns">
+                  <button type="button" class="btn btn-sm" (click)="moveRelease(idx, -1)" [disabled]="idx === 0" title="Move up">&uarr;</button>
+                  <button type="button" class="btn btn-sm" (click)="moveRelease(idx, 1)" [disabled]="idx === selectedReleases().length - 1" title="Move down">&darr;</button>
+                  <button type="button" class="btn btn-sm" (click)="removeSelectedRelease(idx)" title="Remove">&times;</button>
+                </div>
+              </div>
+            }
+          </div>
+          <div class="queue-foot">
+            <button type="button" class="btn btn-primary" style="width: 100%" (click)="createWithReleases()" [disabled]="busy() || !newName.trim()">
+              Create playlist & import ({{ selectedReleases().length }} vols)
+            </button>
+          </div>
+        </div>
+      }
     </div>
   } @else {
     <!-- modo B: rellenar volumenes -->

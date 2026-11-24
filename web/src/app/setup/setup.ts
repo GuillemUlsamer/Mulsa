@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { Api, PlaylistInfo } from '../api';
+import { Api, PlaylistInfo, DiscogsSearchResult } from '../api';
 import { Page } from '../page/page';
 
 interface ImportRow {
@@ -28,6 +28,11 @@ export class Setup implements OnInit, OnDestroy {
   newName = '';
   listId = '';
   volumeCount = 1;
+  searchQuery = '';
+  searching = signal(false);
+  searchError = signal('');
+  searchResults = signal<DiscogsSearchResult[]>([]);
+  selectedReleases = signal<DiscogsSearchResult[]>([]);
   releaseIds: Record<string, string> = {};
   info = signal<PlaylistInfo | null>(null);
   volumes = computed(() => this.info()?.volumes ?? []);
@@ -47,8 +52,15 @@ export class Setup implements OnInit, OnDestroy {
   });
 
   ngOnInit() {
-    if (this.name()) this.loadVolumes();
-    else this.api.settings().subscribe(s => this.driveFolder.set(s.drive_folder));
+    if (this.name()) {
+      this.loadVolumes();
+      const auto = history.state?.autoImport;
+      if (auto && Array.isArray(auto) && auto.length > 0) {
+        this.startImport(this.api.importReleases(this.name()!, auto));
+      }
+    } else {
+      this.api.settings().subscribe(s => this.driveFolder.set(s.drive_folder));
+    }
   }
 
   ngOnDestroy() {
@@ -79,6 +91,80 @@ export class Setup implements OnInit, OnDestroy {
     this.status.set('Creating...');
     this.api.newPlaylist(name, 1).subscribe({
       next: () => { this.api.playlistsStale.set(true); this.api.go(['/setup', name]); },
+      error: e => this.fail(e),
+    });
+  }
+
+  isSelected(id: number): boolean {
+    return this.selectedReleases().some(r => r.id === id);
+  }
+
+  searchDiscogs() {
+    const q = this.searchQuery.trim();
+    if (!q || this.searching() || this.busy()) return;
+    this.searching.set(true);
+    this.searchError.set('');
+    this.api.discogsSearch(q).subscribe({
+      next: res => {
+        this.searching.set(false);
+        this.searchResults.set(res.results ?? []);
+        if (!res.results?.length) {
+          this.searchError.set('No releases found for this search.');
+        }
+      },
+      error: e => {
+        this.searching.set(false);
+        this.searchError.set(e?.error?.detail ?? 'Error searching Discogs');
+      }
+    });
+  }
+
+  cleanCompilationTitle(raw: string): string {
+    let s = raw.replace(/^(Various|Various Artists)\s*[-–—:]\s*/i, '').trim();
+    s = s.replace(/\s*[-–—:]?\s*(Vol(\.|ume)?|Chapter|Part|Pt\.?|#)?\s*([0-9]+|[IVXLCDM]+)$/i, '').trim();
+    return s || raw;
+  }
+
+  addSelectedRelease(r: DiscogsSearchResult) {
+    if (this.isSelected(r.id)) return;
+    if (!this.newName.trim()) {
+      this.newName = this.cleanCompilationTitle(r.title);
+    }
+    this.selectedReleases.update(list => [...list, r]);
+  }
+
+  removeSelectedRelease(index: number) {
+    this.selectedReleases.update(list => list.filter((_, i) => i !== index));
+  }
+
+  moveRelease(index: number, delta: number) {
+    const list = [...this.selectedReleases()];
+    const target = index + delta;
+    if (target < 0 || target >= list.length) return;
+    const temp = list[index];
+    list[index] = list[target];
+    list[target] = temp;
+    this.selectedReleases.set(list);
+  }
+
+  findSeries(r: DiscogsSearchResult) {
+    const series = this.cleanCompilationTitle(r.title);
+    this.searchQuery = series;
+    this.searchDiscogs();
+  }
+
+  createWithReleases() {
+    const name = this.newName.trim();
+    const releases = this.selectedReleases();
+    if (!name || releases.length === 0 || this.busy()) return;
+    this.busy.set(true);
+    this.error.set(false);
+    this.status.set('Creating playlist...');
+    this.api.newPlaylist(name, releases.length).subscribe({
+      next: () => {
+        this.api.playlistsStale.set(true);
+        this.api.go(['/setup', name], { autoImport: releases.map(r => r.id) });
+      },
       error: e => this.fail(e),
     });
   }
