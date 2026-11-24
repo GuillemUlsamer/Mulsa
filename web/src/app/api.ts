@@ -45,6 +45,14 @@ export interface LogEvent {
     tag: string | null;
 }
 
+export interface DiscogsSearchResult {
+    id: number;
+    title: string;
+    year: string;
+    thumb: string;
+    format: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class Api {
     private http = inject(HttpClient);
@@ -124,6 +132,12 @@ export class Api {
     }
     importList(name: string, list_id: string) {
         return this.http.post(`${this.base}/playlists/${encodeURIComponent(name)}/import-list`, { list_id });
+    }
+    importReleases(name: string, release_ids: (string | number)[]) {
+        return this.http.post(`${this.base}/playlists/${encodeURIComponent(name)}/import-releases`, { release_ids });
+    }
+    discogsSearch(query: string, type = 'release') {
+        return this.http.get<{results: DiscogsSearchResult[]}>(`${this.base}/discogs/search`, { params: { q: query, type } });
     }
     importRelease(name: string, volume: string, release_id: string) {
         return this.http.post(`${this.base}/playlists/${encodeURIComponent(name)}/import-release`, { volume, release_id });

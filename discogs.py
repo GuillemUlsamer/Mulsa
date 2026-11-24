@@ -33,3 +33,8 @@ def release(release_id, token=''):
 
 def list_items(list_id, token=''):
     return _get(f'/lists/{list_id}', token)
+
+def search(query, type_='release', token='', per_page=25):
+    # La API de Discogs filtra por tipo (release para evitar masters)
+    q = requests.utils.quote(query)
+    return _get(f'/database/search?q={q}&type={type_}&per_page={per_page}', token)

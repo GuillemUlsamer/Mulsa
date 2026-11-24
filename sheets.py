@@ -446,15 +446,20 @@ def _append_release(spreadsheet, album, year, cover):
         'range': {'sheetId': ws.id, 'dimension': 'ROWS', 'startIndex': row - 1, 'endIndex': row},
         'properties': {'pixelSize': 180}, 'fields': 'pixelSize'}}]})
 
+def import_releases(spreadsheet, release_ids, token='', progress=log.line):
+    if not release_ids:
+        raise RuntimeError('No releases provided.')
+    setup_sheet(spreadsheet, len(release_ids))
+    for i, r_id in enumerate(release_ids, start=1):
+        progress(f'Importing release {i}/{len(release_ids)}...')
+        import_release(spreadsheet, f'V {i}', r_id, token)
+
 def import_list(spreadsheet, list_id, token='', progress=log.line):
     data = discogs.list_items(list_id, token)
-    items = [it for it in data.get('items', []) if it.get('type') == 'release']
+    items = [it['id'] for it in data.get('items', []) if it.get('type') == 'release']
     if not items:
         raise RuntimeError('The list has no releases.')
-    setup_sheet(spreadsheet, len(items))
-    for i, item in enumerate(items, start=1):
-        progress(f'Importing release {i}/{len(items)}...')
-        import_release(spreadsheet, f'V {i}', item['id'], token)
+    import_releases(spreadsheet, items, token, progress)
 
 # Detalle de una playlist para la ficha: temas por volumen, marcadas, descargadas y
 # contraportada. Lee todos los volumenes, asi que solo se pide para el disco seleccionado.

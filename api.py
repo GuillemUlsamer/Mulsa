@@ -14,6 +14,7 @@ import log
 import gauth
 import manager
 import sheets
+import discogs
 import webview
 import gspread
 
@@ -376,3 +377,33 @@ def import_release(name: str, body: dict):
     spreadsheet = _open_playlist(name)
     token = _config().get("discogs_token", "")
     return _background(lambda: sheets.import_release(spreadsheet, body["volume"], body["release_id"], token), "Import finished.")
+
+@api.get("/discogs/search")
+def search_discogs(q: str = "", type: str = "release"):
+    if not q.strip():
+        return {"results": []}
+    token = _config().get("discogs_token", "")
+    try:
+        data = discogs.search(q.strip(), type_=type, token=token)
+        results = [
+            {
+                "id": r.get("id"),
+                "title": r.get("title", ""),
+                "year": r.get("year", ""),
+                "thumb": r.get("thumb", ""),
+                "format": r.get("format", []),
+            }
+            for r in data.get("results", [])
+        ]
+        return {"results": results}
+    except Exception as e:
+        raise HTTPException(502, f"Discogs search error: {e}")
+
+@api.post("/playlists/{name}/import-releases")
+def import_releases(name: str, body: dict):
+    release_ids = body.get("release_ids", [])
+    if not release_ids:
+        raise HTTPException(400, "release_ids list is required.")
+    spreadsheet = _open_playlist(name)
+    token = _config().get("discogs_token", "")
+    return _background(lambda: sheets.import_releases(spreadsheet, release_ids, token), "Import finished.")
